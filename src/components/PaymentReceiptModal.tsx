@@ -26,7 +26,7 @@ export function PaymentReceiptModal({ payment, onClose }: PaymentReceiptModalPro
         <div className="flex items-start justify-between border-b border-slate-200 pb-5 dark:border-slate-700">
           <div>
             <div className="flex items-center gap-2">
-              <img src="/zubkas-logo.png" alt="Zubkas Logo" className="h-10 w-auto" />
+              {profile.logo ? <img src={profile.logo} alt="Company Logo" className="h-10 w-auto" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white">{profile.name?.charAt(0).toUpperCase() ?? 'Z'}</div>}
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-white">{profile.name}</h3>
                 <p className="text-xs text-slate-500">{profile.address}</p>

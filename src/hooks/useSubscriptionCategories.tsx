@@ -3,45 +3,50 @@ import { supabase } from '@/lib/supabase';
 
 export const SUB_CATEGORIES_EVENT = 'sub_categories_updated';
 
-const DEFAULT_CATEGORIES = [
-  'Web Hosting & Maintenance',
-  'Software / SaaS License',
-  'Digital Marketing & SEO Retainer',
-  'Cloud Infrastructure / VPS',
-  'Annual Maintenance Contract (AMC)',
-];
+function dedupeByName(names: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const name of names) {
+    const key = name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(name);
+    }
+  }
+  return result;
+}
 
 export function useSubscriptionCategories() {
-  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
+
+  const fetchCategories = useCallback(async () => {
+    const { data, error } = await supabase.from('subscription_categories').select('*');
+    if (error) {
+      console.error('fetch sub_categories:', error.message);
+      return;
+    }
+    const names = dedupeByName((data ?? []).map((r) => r.name));
+    setCategories(names);
+  }, []);
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.from('subscription_categories').select('*');
-      if (error || !data || data.length === 0) {
-        setCategories(DEFAULT_CATEGORIES);
-        setLoaded(true);
-        return;
-      }
-      setCategories(data.map((r) => r.name));
+      await fetchCategories();
       setLoaded(true);
     })();
 
-    const handler = () => {
-      supabase.from('subscription_categories').select('*').then(({ data }) => {
-        setCategories(data && data.length > 0 ? data.map((r) => r.name) : DEFAULT_CATEGORIES);
-      });
-    };
+    const handler = () => { fetchCategories(); };
     window.addEventListener(SUB_CATEGORIES_EVENT, handler);
     return () => window.removeEventListener(SUB_CATEGORIES_EVENT, handler);
-  }, []);
+  }, [fetchCategories]);
 
   const addCategory = useCallback((name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
     setCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
-      const next = [...prev, trimmed];
+      const next = dedupeByName([...prev, trimmed]);
       supabase.from('subscription_categories').insert({ name: trimmed }).then(({ error }) => {
         if (error) console.error('insert sub_category:', error.message);
       });
@@ -54,7 +59,7 @@ export function useSubscriptionCategories() {
     const trimmed = newName.trim();
     if (!trimmed) return;
     setCategories((prev) => {
-      const next = prev.map((c) => c === oldName ? trimmed : c);
+      const next = dedupeByName(prev.map((c) => c === oldName ? trimmed : c));
       supabase.from('subscription_categories').update({ name: trimmed }).eq('name', oldName).then(({ error }) => {
         if (error) console.error('update sub_category:', error.message);
       });

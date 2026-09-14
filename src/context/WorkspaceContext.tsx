@@ -147,8 +147,24 @@ function projectToRow(p: Project) {
 function rowToSubscription(r: Record<string, unknown>): Subscription {
   return { id: r.id, name: r.name, category: r.category, amount: Number(r.amount ?? 0), billingCycle: r.billing_cycle, nextBillingDate: r.next_billing_date, status: r.status, clientId: r.client_id, referenceId: r.reference_id, startDate: r.start_date, endDate: r.end_date, paymentMethod: r.payment_method, invoiceId: r.invoice_id, origin: r.origin };
 }
-function subscriptionToRow(s: Subscription) {
-  return { id: s.id, name: s.name, category: s.category, amount: s.amount, billing_cycle: s.billingCycle, next_billing_date: s.nextBillingDate, status: s.status, client_id: s.clientId, reference_id: s.referenceId, start_date: s.startDate, end_date: s.endDate, payment_method: s.paymentMethod, invoice_id: s.invoiceId, origin: s.origin };
+function subscriptionToRow(s: Subscription): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    id: s.id,
+    name: s.name,
+    category: s.category,
+    amount: s.amount,
+    billing_cycle: s.billingCycle,
+    next_billing_date: s.nextBillingDate,
+    status: s.status,
+    client_id: s.clientId ?? null,
+  };
+  if (s.referenceId !== undefined) row.reference_id = s.referenceId;
+  if (s.startDate !== undefined) row.start_date = s.startDate;
+  if (s.endDate !== undefined) row.end_date = s.endDate;
+  if (s.paymentMethod !== undefined) row.payment_method = s.paymentMethod;
+  if (s.invoiceId !== undefined) row.invoice_id = s.invoiceId;
+  if (s.origin !== undefined) row.origin = s.origin;
+  return row;
 }
 
 // ── Silent persistence helpers (fire-and-forget with error logging) ─────
@@ -391,6 +407,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const addSubscription = (subscription: Subscription) => {
     setDb((prev) => ({ ...prev, subscriptions: [...prev.subscriptions, subscription] }));
     upsertRow('subscriptions', subscriptionToRow(subscription));
+    window.dispatchEvent(new Event('subscriptions_updated'));
   };
 
   const updateSubscriptionStatus = (subscriptionId: string, status: SubscriptionStatus) => {

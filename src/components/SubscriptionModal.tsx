@@ -33,16 +33,17 @@ export function SubscriptionModal({ open, onClose }: SubscriptionModalProps) {
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!name || !clientId || !category || !amount) {
-      showToast('Name, client, category, and amount are required', 'error');
+    const parsedAmount = parseFloat(amount);
+    if (!name.trim() || !clientId || !category || isNaN(parsedAmount) || parsedAmount <= 0) {
+      showToast('Name, client, category, and a valid amount are required', 'error');
       return;
     }
     const sub: Subscription = {
       id: generateId('sub'),
-      name,
+      name: name.trim(),
       clientId,
       category,
-      amount: Number(amount),
+      amount: parsedAmount,
       billingCycle,
       nextBillingDate: calculateNextBillingDate(startDate, billingCycle),
       status,

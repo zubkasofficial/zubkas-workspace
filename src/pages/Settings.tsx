@@ -112,14 +112,6 @@ function CompanyProfileCard({ showToast }: { showToast: (msg: string, type?: 'su
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Base App Branding Logo</label>
-          <div className="p-4 border border-gray-200 rounded-lg bg-gray-50 flex items-center gap-4">
-            <img src="/zubkas-logo.png" alt="Zubkas Logo" className="h-12 w-auto" />
-            <span className="text-xs text-gray-500">(This permanent logo is used on all documents)</span>
-          </div>
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Company Name</label>

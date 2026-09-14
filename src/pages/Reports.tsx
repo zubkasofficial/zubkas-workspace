@@ -189,7 +189,7 @@ export function Reports() {
       <div id="printable-report-content" className="space-y-6 rounded-2xl bg-white p-6">
         {/* Report Header */}
         <div className="flex items-center gap-4 border-b-2 border-slate-300 pb-4">
-          <img src="/zubkas-logo.png" alt="Zubkas Logo" className="h-16 w-auto" />
+          {profile.logo ? <img src={profile.logo} alt="Company Logo" className="h-16 w-auto" /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-2xl font-bold text-white">{profile.name?.charAt(0).toUpperCase() ?? 'Z'}</div>}
           <div>
             <h1 className="text-xl font-bold text-slate-900">{profile.name}</h1>
             <p className="text-sm text-slate-600">{profile.address}</p>
