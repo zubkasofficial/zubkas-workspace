@@ -2,7 +2,6 @@ import { LayoutDashboard, Users, FileText, Receipt, CreditCard, Calculator, Fold
 import { useState } from 'react';
 import { hasPermission } from '@/utils/permissions';
 import { useAuth } from '@/context/AuthContext';
-import { ZubkasIcon } from '@/components/ZubkasIcon';
 
 export type PageKey =
   | 'dashboard'
@@ -71,10 +70,12 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
     <>
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-50 rounded-lg bg-slate-900 p-2 text-white shadow-lg lg:hidden dark:bg-slate-800"
+        className="fixed left-4 top-3 z-40 flex items-center gap-2 rounded-lg bg-slate-900 py-2 pl-2 pr-3 text-white shadow-lg lg:hidden dark:bg-slate-800"
         aria-label="Open sidebar"
       >
         <Menu className="h-5 w-5" />
+        <img src="/icon_white.png" alt="Zubkas" className="h-6 w-6 object-contain rounded" />
+        <span className="text-xs font-bold">Zubkas</span>
       </button>
 
       {mobileOpen && (
@@ -88,7 +89,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
       >
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <ZubkasIcon className="h-8 w-8" variant="white" />
+            <img src="/icon_white.png" alt="Zubkas Workspace" className="w-8 h-8 object-contain rounded-md" />
             <div>
               <h1 className="text-sm font-bold text-white">Zubkas Workspace</h1>
             </div>
