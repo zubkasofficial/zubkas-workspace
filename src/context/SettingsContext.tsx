@@ -93,28 +93,42 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) { setLoaded(true); }
+    }, 5000);
+
     (async () => {
-      const { data, error } = await supabase
-        .from('app_settings')
-        .select('profile, payment_accounts, tax, terms, admin_email, admin_password')
-        .eq('id', 1)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('profile, payment_accounts, tax, terms, admin_email, admin_password')
+          .eq('id', 1)
+          .maybeSingle();
 
-      if (error || !data) {
+        if (cancelled) return;
+        clearTimeout(timeout);
+
+        if (error || !data) {
+          setLoaded(true);
+          return;
+        }
+
+        setSettings({
+          profile: (data.profile as CompanyProfile) ?? DEFAULT_PROFILE,
+          paymentAccounts: (data.payment_accounts as PaymentAccount[]) ?? DEFAULT_PAYMENT_ACCOUNTS,
+          tax: (data.tax as TaxSettings) ?? DEFAULT_TAX,
+          terms: (data.terms as string[]) ?? DEFAULT_TERMS,
+        });
+        setAdminEmail(data.admin_email ?? 'admin@zubkas.com');
+        setAdminPassword(data.admin_password ?? 'admin123');
         setLoaded(true);
-        return;
+      } catch {
+        if (!cancelled) { clearTimeout(timeout); setLoaded(true); }
       }
-
-      setSettings({
-        profile: (data.profile as CompanyProfile) ?? DEFAULT_PROFILE,
-        paymentAccounts: (data.payment_accounts as PaymentAccount[]) ?? DEFAULT_PAYMENT_ACCOUNTS,
-        tax: (data.tax as TaxSettings) ?? DEFAULT_TAX,
-        terms: (data.terms as string[]) ?? DEFAULT_TERMS,
-      });
-      setAdminEmail(data.admin_email ?? 'admin@zubkas.com');
-      setAdminPassword(data.admin_password ?? 'admin123');
-      setLoaded(true);
     })();
+
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   const persistSettings = useCallback(async (partial: Partial<{ profile: CompanyProfile; payment_accounts: PaymentAccount[]; tax: TaxSettings; terms: string[] }>) => {
@@ -156,7 +170,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const defaultPaymentAccount = settings.paymentAccounts.find((a) => a.isDefault) ?? settings.paymentAccounts[0];
 
-  if (!loaded) return null;
+  if (!loaded) return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+        <p className="text-sm text-slate-400">Loading workspace...</p>
+      </div>
+    </div>
+  );
 
   return (
     <SettingsContext.Provider value={{ settings, updateProfile, updatePaymentAccounts, updateTax, updateTerms, defaultPaymentAccount, adminEmail, adminPassword, updateAdminCredentials }}>

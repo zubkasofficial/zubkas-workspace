@@ -1,4 +1,4 @@
-import { Check, Eye, EyeOff, Image as ImageIcon, Plus, Star, Trash2, Upload, X, QrCode } from 'lucide-react';
+import { Check, Eye, EyeOff, Image as ImageIcon, Plus, Star, Trash2, Upload, X, QrCode, Building2, CreditCard, FileText, ShieldCheck, Percent, Palette } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -80,13 +80,13 @@ function CompanyProfileCard({ showToast }: { showToast: (msg: string, type?: 'su
 
   return (
     <div className={cardClass}>
-      <SectionHeader icon={<img src="/icon-512.png" alt="Zubkas" className="h-5 w-5 object-contain" />} title="Company Profile" description="These details appear on every invoice and quotation" />
+      <SectionHeader icon={<Building2 className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Company Profile" description="These details appear on every invoice and quotation" />
       <div className="mt-6 space-y-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
           <div className="flex flex-col items-center gap-3">
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
               {profile.logo ? (
-                <img src={profile.logo} alt="Company logo" className="h-full w-full object-contain" />
+                <img src={profile.logo} alt="Company logo" className="h-full w-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               ) : (
                 <ImageIcon className="h-8 w-8 text-slate-400" />
               )}
@@ -185,7 +185,7 @@ function PaymentAccountsCard({ showToast }: { showToast: (msg: string, type?: 's
 
   return (
     <div className={cardClass}>
-      <SectionHeader icon={<img src="/icon-512.png" alt="Zubkas" className="h-5 w-5 object-contain" />} title="Payment Accounts" description="Bank and UPI details shown on invoices for customer payments" />
+      <SectionHeader icon={<CreditCard className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Payment Accounts" description="Bank and UPI details shown on invoices for customer payments" />
       <div className="mt-6 space-y-5">
         {accounts.map((acc) => (
           <div key={acc.id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
@@ -214,7 +214,7 @@ function PaymentAccountsCard({ showToast }: { showToast: (msg: string, type?: 's
               <div className="flex items-center gap-4">
                 <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-800">
                   {acc.qrCode ? (
-                    <img src={acc.qrCode} alt="UPI QR Code" className="h-full w-full object-contain" />
+                    <img src={acc.qrCode} alt="UPI QR Code" className="h-full w-full object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <QrCode className="h-8 w-8 text-slate-400" />
                   )}
@@ -265,7 +265,7 @@ function TermsCard({ showToast }: { showToast: (msg: string, type?: 'success' | 
 
   return (
     <div className={cardClass}>
-      <SectionHeader icon={<img src="/icon-512.png" alt="Zubkas" className="h-5 w-5 object-contain" />} title="Default Terms & Conditions" description="These pre-fill into every new quotation and invoice" />
+      <SectionHeader icon={<FileText className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Default Terms & Conditions" description="These pre-fill into every new quotation and invoice" />
       <div className="mt-6 space-y-4">
         <div className="space-y-2">
           {terms.map((term, index) => (
@@ -312,7 +312,7 @@ function AdminProfileCard({ showToast }: { showToast: (msg: string, type?: 'succ
 
   return (
     <div className={cardClass}>
-      <SectionHeader icon={<img src="/icon-512.png" alt="Zubkas" className="h-5 w-5 object-contain" />} title="Admin Profile & Credentials" description="Manage your workspace login credentials" />
+      <SectionHeader icon={<ShieldCheck className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Admin Profile & Credentials" description="Manage your workspace login credentials" />
       <div className="mt-6 space-y-4">
         <div>
           <label className={labelClass}>Admin Email</label>
@@ -354,7 +354,7 @@ function TaxSettingsCard({ showToast }: { showToast: (msg: string, type?: 'succe
 
   return (
     <div className={cardClass}>
-      <SectionHeader icon={<img src="/icon-512.png" alt="Zubkas" className="h-5 w-5 object-contain" />} title="Tax Configuration" description="Tax rate and default behavior for invoices and quotations" />
+      <SectionHeader icon={<Percent className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Tax Configuration" description="Tax rate and default behavior for invoices and quotations" />
       <div className="mt-6 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col justify-end">
@@ -403,7 +403,7 @@ function ThemeCard({ showToast }: { showToast: (msg: string, type?: 'success' | 
 
   return (
     <div className={cardClass}>
-      <SectionHeader icon={<img src="/icon-512.png" alt="Zubkas" className="h-5 w-5 object-contain" />} title="Theme & Styling" description="Customize the appearance of your workspace" />
+      <SectionHeader icon={<Palette className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Theme & Styling" description="Customize the appearance of your workspace" />
       <div className="mt-6 space-y-5">
         <div>
           <label className={labelClass}>Appearance Mode</label>

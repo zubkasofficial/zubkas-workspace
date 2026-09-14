@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { getAllPermissions } from '@/utils/permissions';
 import { supabase } from '@/lib/supabase';
+import { ZubkasIcon } from '@/components/ZubkasIcon';
 import type { CurrentUser } from '@/types';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -251,7 +252,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         {/* Brand header */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <img src="/icon_white.png" alt="Zubkas Icon" className="h-10 w-10" />
+            <ZubkasIcon className="h-10 w-10" variant="white" />
             <div>
               <h1 className="text-base font-bold tracking-tight text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-white/60">Business Management Suite</p>
@@ -299,7 +300,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         <div className="my-auto w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           {/* Mobile brand header */}
           <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <img src="/icon-512.png" alt="Zubkas Icon" className="h-9 w-9 object-contain rounded-lg p-1 bg-red-900/10 border border-red-900/20" />
+            <ZubkasIcon className="h-9 w-9 rounded-lg" />
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">Business Management Suite</p>

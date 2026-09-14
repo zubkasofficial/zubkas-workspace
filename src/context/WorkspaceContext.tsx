@@ -181,28 +181,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const [clientsRes, quotesRes, invoicesRes, paymentsRes, accountingRes, projectsRes, subsRes] = await Promise.all([
-        supabase.from('clients').select('*'),
-        supabase.from('quotations').select('*'),
-        supabase.from('invoices').select('*'),
-        supabase.from('payments').select('*'),
-        supabase.from('accounting_entries').select('*'),
-        supabase.from('projects').select('*'),
-        supabase.from('subscriptions').select('*'),
-      ]);
+    let cancelled = false;
+    const timeout = setTimeout(() => {
+      if (!cancelled) setLoaded(true);
+    }, 8000);
 
-      setDb({
-        clients: (clientsRes.data ?? []).map(rowToClient),
-        quotations: (quotesRes.data ?? []).map(rowToQuotation),
-        invoices: (invoicesRes.data ?? []).map(rowToInvoice),
-        payments: (paymentsRes.data ?? []).map(rowToPayment),
-        accounting: (accountingRes.data ?? []).map(rowToAccounting),
-        projects: (projectsRes.data ?? []).map(rowToProject),
-        subscriptions: (subsRes.data ?? []).map(rowToSubscription),
-      });
-      setLoaded(true);
+    (async () => {
+      try {
+        const [clientsRes, quotesRes, invoicesRes, paymentsRes, accountingRes, projectsRes, subsRes] = await Promise.all([
+          supabase.from('clients').select('*'),
+          supabase.from('quotations').select('*'),
+          supabase.from('invoices').select('*'),
+          supabase.from('payments').select('*'),
+          supabase.from('accounting_entries').select('*'),
+          supabase.from('projects').select('*'),
+          supabase.from('subscriptions').select('*'),
+        ]);
+
+        if (cancelled) return;
+        clearTimeout(timeout);
+
+        setDb({
+          clients: (clientsRes.data ?? []).map(rowToClient),
+          quotations: (quotesRes.data ?? []).map(rowToQuotation),
+          invoices: (invoicesRes.data ?? []).map(rowToInvoice),
+          payments: (paymentsRes.data ?? []).map(rowToPayment),
+          accounting: (accountingRes.data ?? []).map(rowToAccounting),
+          projects: (projectsRes.data ?? []).map(rowToProject),
+          subscriptions: (subsRes.data ?? []).map(rowToSubscription),
+        });
+        setLoaded(true);
+      } catch {
+        if (!cancelled) { clearTimeout(timeout); setLoaded(true); }
+      }
     })();
+
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   const resetDb = () => {
@@ -608,7 +622,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  if (!loaded) return null;
+  if (!loaded) return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+        <p className="text-sm text-slate-400">Loading workspace data...</p>
+      </div>
+    </div>
+  );
 
   return (
     <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment }}>

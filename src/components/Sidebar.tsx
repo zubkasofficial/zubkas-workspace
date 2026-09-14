@@ -2,6 +2,7 @@ import { LayoutDashboard, Users, FileText, Receipt, CreditCard, Calculator, Fold
 import { useState } from 'react';
 import { hasPermission } from '@/utils/permissions';
 import { useAuth } from '@/context/AuthContext';
+import { ZubkasIcon } from '@/components/ZubkasIcon';
 
 export type PageKey =
   | 'dashboard'
@@ -87,7 +88,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
       >
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <img src={darkMode ? "/icon-512.png" : "/icon_white.png"} alt="Zubkas Icon" className="h-8 w-8" />
+            <ZubkasIcon className="h-8 w-8" variant="white" />
             <div>
               <h1 className="text-sm font-bold text-white">Zubkas Workspace</h1>
             </div>
