@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, UserCog } from 'lucide-react';
-import type { Employee, Project, ProjectStatus } from '@/types';
+import type { Project, ProjectStatus } from '@/types';
 import { Modal, inputClass, labelClass } from '@/components/Modal';
 import { generateId, todayISO } from '@/utils/calculations';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
+import { useEmployees } from '@/hooks/useEmployees';
 
 interface ProjectModalProps {
   open: boolean;
@@ -13,20 +14,10 @@ interface ProjectModalProps {
 
 const STATUSES: ProjectStatus[] = ['Not Started', 'In Progress', 'In Review', 'Completed'];
 
-function loadEmployees(): Employee[] {
-  try {
-    const raw = localStorage.getItem('zubkas_employees_data');
-    if (raw) {
-      const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed)) return parsed.filter((e) => e.status === 'Active');
-    }
-  } catch { /* ignore */ }
-  return [];
-}
-
 export function ProjectModal({ open, onClose }: ProjectModalProps) {
   const { db, addProject } = useWorkspace();
   const { showToast } = useToast();
+  const { employees: allEmployees } = useEmployees();
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState(db.clients[0]?.id ?? '');
   const [status, setStatus] = useState<ProjectStatus>('Not Started');
@@ -37,7 +28,7 @@ export function ProjectModal({ open, onClose }: ProjectModalProps) {
   const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false);
   const assigneeRef = useRef<HTMLDivElement>(null);
 
-  const employees = loadEmployees();
+  const employees = allEmployees.filter((e) => e.status === 'Active');
 
   useEffect(() => {
     if (!open) return;

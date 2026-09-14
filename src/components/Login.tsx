@@ -3,7 +3,9 @@ import { ArrowLeft, ArrowRight, ChartBar as BarChart3, CircleCheck as CheckCircl
 import { useToast } from '@/context/ToastContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSettings } from '@/context/SettingsContext';
 import { getAllPermissions } from '@/utils/permissions';
+import { supabase } from '@/lib/supabase';
 import type { CurrentUser } from '@/types';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -31,6 +33,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   const { showToast } = useToast();
   const { theme } = useTheme();
   const { login } = useAuth();
+  const { adminEmail, adminPassword } = useSettings();
   const [tab, setTab] = useState<Tab>('password');
   const [view, setView] = useState<View>('login');
 
@@ -90,16 +93,16 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  const handlePasswordLogin = (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setLoading(false);
-      const adminEmail = getAdminEmail();
-      const adminPassword = getAdminPassword();
+      const adminEmailVal = getAdminEmail();
+      const adminPasswordVal = getAdminPassword();
       const normalizedEmail = email.trim().toLowerCase();
 
-      if (normalizedEmail === adminEmail.toLowerCase() && password === adminPassword) {
+      if (normalizedEmail === adminEmailVal.toLowerCase() && password === adminPasswordVal) {
         const user: CurrentUser = {
           role: 'admin',
           name: 'Administrator',
@@ -113,31 +116,28 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       }
 
       try {
-        const raw = localStorage.getItem('zubkas_employees_data');
-        if (raw) {
-          const employees = JSON.parse(raw) as Array<{ id: string; email: string; password: string; status: string; name: string; permissions: Record<string, boolean> }>;
-          const match = employees.find((emp) => emp.email.toLowerCase() === normalizedEmail);
-          if (match) {
-            if (match.password !== password) {
-              showToast('Invalid credentials or account inactive', 'error');
-              return;
-            }
-            if (match.status !== 'Active') {
-              showToast('Invalid credentials or account inactive', 'error');
-              return;
-            }
-            const user: CurrentUser = {
-              role: 'employee',
-              name: match.name,
-              email: match.email,
-              permissions: match.permissions,
-              employeeId: match.id,
-            };
-            login(user, remember);
-            showToast('Welcome back! Login successful.');
-            onLogin();
+        const { data: employees } = await supabase.from('employees').select('*');
+        const match = (employees ?? []).find((emp: Record<string, unknown>) => (emp.email as string).toLowerCase() === normalizedEmail);
+        if (match) {
+          if (match.password !== password) {
+            showToast('Invalid credentials or account inactive', 'error');
             return;
           }
+          if (match.status !== 'Active') {
+            showToast('Invalid credentials or account inactive', 'error');
+            return;
+          }
+          const user: CurrentUser = {
+            role: 'employee',
+            name: match.name,
+            email: match.email,
+            permissions: match.permissions ?? {},
+            employeeId: match.id,
+          };
+          login(user, remember);
+          showToast('Welcome back! Login successful.');
+          onLogin();
+          return;
         }
       } catch { /* ignore */ }
 
@@ -214,17 +214,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     }, 700);
   };
 
-  const getAdminEmail = (): string => {
-    try { return localStorage.getItem('zubkas_settings_admin_email') ?? DEFAULT_ADMIN_EMAIL; } catch { return DEFAULT_ADMIN_EMAIL; }
-  };
-
-  const getAdminPassword = (): string => {
-    try {
-      const encoded = localStorage.getItem('zubkas_settings_admin_password');
-      if (encoded) return atob(encoded);
-    } catch { /* ignore */ }
-    return DEFAULT_ADMIN_PASSWORD;
-  };
+  const getAdminEmail = (): string => adminEmail || DEFAULT_ADMIN_EMAIL;
+  const getAdminPassword = (): string => adminPassword || DEFAULT_ADMIN_PASSWORD;
 
   const accent = theme.accent;
 

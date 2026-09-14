@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { SquareCheck as CheckSquare, Save, X } from 'lucide-react';
-import type { Employee } from '@/types';
 import type { ProjectTask, TaskPriority } from '@/hooks/useProjectTasks';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
+import { useEmployees } from '@/hooks/useEmployees';
 import { todayISO } from '@/utils/calculations';
 
 interface TaskModalProps {
@@ -23,28 +23,18 @@ const PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
 const labelClass = 'mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300';
 
-function loadEmployees(): Employee[] {
-  try {
-    const raw = localStorage.getItem('zubkas_employees_data');
-    if (raw) {
-      const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed)) return parsed.filter((e) => e.status === 'Active');
-    }
-  } catch { /* ignore */ }
-  return [];
-}
-
 export function TaskModal({ open, onClose, editingTask, presetProjectId }: TaskModalProps) {
   const { db } = useWorkspace();
   const { addTask, updateTask } = useProjectTasks();
   const { showToast } = useToast();
+  const { employees: allEmployees } = useEmployees();
   const [projectId, setProjectId] = useState('');
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dueDate, setDueDate] = useState(todayISO());
   const [description, setDescription] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
-  const employees = loadEmployees();
+  const employees = allEmployees.filter((e) => e.status === 'Active');
 
   useEffect(() => {
     if (open) {

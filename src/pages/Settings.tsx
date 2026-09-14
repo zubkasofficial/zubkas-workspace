@@ -300,21 +300,20 @@ function TermsCard({ showToast }: { showToast: (msg: string, type?: 'success' | 
 }
 
 function AdminProfileCard({ showToast }: { showToast: (msg: string, type?: 'success' | 'error') => void }) {
-  const [email, setEmail] = useState(() => {
-    try { return localStorage.getItem('zubkas_settings_admin_email') ?? 'admin@zubkas.com'; } catch { return 'admin@zubkas.com'; }
-  });
+  const { adminEmail, updateAdminCredentials } = useSettings();
+  const [email, setEmail] = useState(adminEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const saveEmail = () => {
     if (!email.trim()) { showToast('Email cannot be empty', 'error'); return; }
-    try { localStorage.setItem('zubkas_settings_admin_email', email); } catch { /* ignore */ }
+    updateAdminCredentials(email.trim());
     showToast('Admin email saved successfully');
   };
 
   const updatePassword = () => {
     if (password.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
-    try { localStorage.setItem('zubkas_settings_admin_password', btoa(password)); } catch { /* ignore */ }
+    updateAdminCredentials(adminEmail, password);
     setPassword('');
     showToast('Password updated successfully');
   };

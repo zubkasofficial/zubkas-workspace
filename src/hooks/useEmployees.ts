@@ -1,40 +1,48 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Employee } from '@/types';
+import { supabase } from '@/lib/supabase';
 
-const EMPLOYEES_KEY = 'zubkas_employees_data';
 const EMPLOYEES_EVENT = 'zubkas_employees_updated';
 
-function loadEmployees(): Employee[] {
-  try {
-    const raw = localStorage.getItem(EMPLOYEES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch { /* ignore */ }
-  return [];
-}
-
-function saveEmployees(employees: Employee[]): void {
-  try {
-    localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(employees));
-  } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent(EMPLOYEES_EVENT));
-}
-
 export function useEmployees() {
-  const [employees, setEmployees] = useState<Employee[]>(loadEmployees);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const handler = () => setEmployees(loadEmployees());
+    (async () => {
+      const { data, error } = await supabase.from('employees').select('*');
+      if (error) { setLoaded(true); return; }
+      setEmployees((data ?? []).map((r) => ({
+        id: r.id, name: r.name, email: r.email, password: r.password, category: r.category,
+        phone: r.phone, status: r.status, permissions: r.permissions ?? {}, created_at: r.created_at,
+      })));
+      setLoaded(true);
+    })();
+
+    const handler = () => {
+      supabase.from('employees').select('*').then(({ data }) => {
+        setEmployees((data ?? []).map((r) => ({
+          id: r.id, name: r.name, email: r.email, password: r.password, category: r.category,
+          phone: r.phone, status: r.status, permissions: r.permissions ?? {}, created_at: r.created_at,
+        })));
+      });
+    };
     window.addEventListener(EMPLOYEES_EVENT, handler);
     return () => window.removeEventListener(EMPLOYEES_EVENT, handler);
   }, []);
 
+  const persistAll = (next: Employee[]) => {
+    supabase.from('employees').upsert(next.map((e) => ({
+      id: e.id, name: e.name, email: e.email, password: e.password, category: e.category,
+      phone: e.phone, status: e.status, permissions: e.permissions, created_at: e.created_at,
+    }))).then(({ error }) => { if (error) console.error('upsert employees:', error.message); });
+    window.dispatchEvent(new CustomEvent(EMPLOYEES_EVENT));
+  };
+
   const addEmployee = useCallback((employee: Employee) => {
     setEmployees((prev) => {
       const next = [...prev, employee];
-      saveEmployees(next);
+      persistAll(next);
       return next;
     });
   }, []);
@@ -42,7 +50,7 @@ export function useEmployees() {
   const updateEmployee = useCallback((id: string, updates: Partial<Omit<Employee, 'id' | 'created_at'>>) => {
     setEmployees((prev) => {
       const next = prev.map((e) => (e.id === id ? { ...e, ...updates } : e));
-      saveEmployees(next);
+      persistAll(next);
       return next;
     });
   }, []);
@@ -50,10 +58,11 @@ export function useEmployees() {
   const deleteEmployee = useCallback((id: string) => {
     setEmployees((prev) => {
       const next = prev.filter((e) => e.id !== id);
-      saveEmployees(next);
+      supabase.from('employees').delete().eq('id', id).then(({ error }) => { if (error) console.error('delete employee:', error.message); });
+      window.dispatchEvent(new CustomEvent(EMPLOYEES_EVENT));
       return next;
     });
   }, []);
 
-  return { employees, addEmployee, updateEmployee, deleteEmployee };
+  return { employees, addEmployee, updateEmployee, deleteEmployee, loaded };
 }

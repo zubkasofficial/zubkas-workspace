@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export interface CompanyProfile {
   logo: string;
@@ -45,14 +46,12 @@ interface SettingsContextValue {
   updateTax: (tax: TaxSettings) => void;
   updateTerms: (terms: string[]) => void;
   defaultPaymentAccount: PaymentAccount | undefined;
+  adminEmail: string;
+  adminPassword: string;
+  updateAdminCredentials: (email: string, password?: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
-
-const PROFILE_KEY = 'zubkas_settings_profile';
-const PAYMENT_ACCOUNTS_KEY = 'zubkas_settings_payment_accounts';
-const TAX_KEY = 'zubkas_tax_settings';
-const TERMS_KEY = 'zubkas_settings_terms';
 
 const DEFAULT_PROFILE: CompanyProfile = {
   logo: '',
@@ -80,76 +79,87 @@ const DEFAULT_TERMS = [
   'This offer is valid for 15 days from the date of quotation.',
 ];
 
-function loadSetting<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as T;
-  } catch { /* ignore */ }
-  return fallback;
-}
-
-function loadTaxSettings(): TaxSettings {
-  // Try new key first
-  try {
-    const raw = localStorage.getItem(TAX_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<TaxSettings>;
-      if (parsed.name !== undefined && parsed.rate !== undefined) {
-        return { name: parsed.name, rate: parsed.rate, enabled: parsed.enabled ?? true };
-      }
-    }
-  } catch { /* ignore */ }
-  // Migrate from old key
-  try {
-    const raw = localStorage.getItem('zubkas_settings_tax');
-    if (raw) {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      return {
-        name: (parsed.taxLabel as string) ?? 'GST',
-        rate: (parsed.gst as number) ?? 18,
-        enabled: (parsed.enableTaxByDefault as boolean) ?? true,
-      };
-    }
-  } catch { /* ignore */ }
-  return DEFAULT_TAX;
-}
-
-function loadSettings(): AppSettings {
-  return {
-    profile: loadSetting(PROFILE_KEY, DEFAULT_PROFILE),
-    paymentAccounts: loadSetting(PAYMENT_ACCOUNTS_KEY, DEFAULT_PAYMENT_ACCOUNTS),
-    tax: loadTaxSettings(),
-    terms: loadSetting(TERMS_KEY, DEFAULT_TERMS),
-  };
-}
+const DEFAULT_SETTINGS: AppSettings = {
+  profile: DEFAULT_PROFILE,
+  paymentAccounts: DEFAULT_PAYMENT_ACCOUNTS,
+  tax: DEFAULT_TAX,
+  terms: DEFAULT_TERMS,
+};
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [adminEmail, setAdminEmail] = useState('admin@zubkas.com');
+  const [adminPassword, setAdminPassword] = useState('admin123');
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('app_settings')
+        .select('profile, payment_accounts, tax, terms, admin_email, admin_password')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error || !data) {
+        setLoaded(true);
+        return;
+      }
+
+      setSettings({
+        profile: (data.profile as CompanyProfile) ?? DEFAULT_PROFILE,
+        paymentAccounts: (data.payment_accounts as PaymentAccount[]) ?? DEFAULT_PAYMENT_ACCOUNTS,
+        tax: (data.tax as TaxSettings) ?? DEFAULT_TAX,
+        terms: (data.terms as string[]) ?? DEFAULT_TERMS,
+      });
+      setAdminEmail(data.admin_email ?? 'admin@zubkas.com');
+      setAdminPassword(data.admin_password ?? 'admin123');
+      setLoaded(true);
+    })();
+  }, []);
+
+  const persistSettings = useCallback(async (partial: Partial<{ profile: CompanyProfile; payment_accounts: PaymentAccount[]; tax: TaxSettings; terms: string[] }>) => {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ id: 1, ...partial, updated_at: new Date().toISOString() });
+    if (error) console.error('Failed to save settings:', error.message);
+  }, []);
 
   const updateProfile = useCallback((profile: CompanyProfile) => {
     setSettings((prev) => ({ ...prev, profile }));
-    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* ignore */ }
-  }, []);
+    persistSettings({ profile });
+  }, [persistSettings]);
 
   const updatePaymentAccounts = useCallback((accounts: PaymentAccount[]) => {
     setSettings((prev) => ({ ...prev, paymentAccounts: accounts }));
-    try { localStorage.setItem(PAYMENT_ACCOUNTS_KEY, JSON.stringify(accounts)); } catch { /* ignore */ }
-  }, []);
+    persistSettings({ payment_accounts: accounts });
+  }, [persistSettings]);
 
   const updateTax = useCallback((tax: TaxSettings) => {
     setSettings((prev) => ({ ...prev, tax }));
-    try { localStorage.setItem(TAX_KEY, JSON.stringify(tax)); } catch { /* ignore */ }
-  }, []);
+    persistSettings({ tax });
+  }, [persistSettings]);
 
   const updateTerms = useCallback((terms: string[]) => {
     setSettings((prev) => ({ ...prev, terms }));
-    try { localStorage.setItem(TERMS_KEY, JSON.stringify(terms)); } catch { /* ignore */ }
+    persistSettings({ terms });
+  }, [persistSettings]);
+
+  const updateAdminCredentials = useCallback((email: string, password?: string) => {
+    setAdminEmail(email);
+    if (password) setAdminPassword(password);
+    const updates: Record<string, string> = { admin_email: email };
+    if (password) updates.admin_password = password;
+    supabase.from('app_settings').upsert({ id: 1, ...updates, updated_at: new Date().toISOString() }).then(({ error }) => {
+      if (error) console.error('Failed to save admin credentials:', error.message);
+    });
   }, []);
 
   const defaultPaymentAccount = settings.paymentAccounts.find((a) => a.isDefault) ?? settings.paymentAccounts[0];
 
+  if (!loaded) return null;
+
   return (
-    <SettingsContext.Provider value={{ settings, updateProfile, updatePaymentAccounts, updateTax, updateTerms, defaultPaymentAccount }}>
+    <SettingsContext.Provider value={{ settings, updateProfile, updatePaymentAccounts, updateTax, updateTerms, defaultPaymentAccount, adminEmail, adminPassword, updateAdminCredentials }}>
       {children}
     </SettingsContext.Provider>
   );

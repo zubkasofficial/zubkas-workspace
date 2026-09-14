@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-export const SUB_CATEGORIES_KEY = 'zubkas_sub_categories';
 export const SUB_CATEGORIES_EVENT = 'sub_categories_updated';
 
 const DEFAULT_CATEGORIES = [
@@ -11,32 +11,27 @@ const DEFAULT_CATEGORIES = [
   'Annual Maintenance Contract (AMC)',
 ];
 
-function loadCategories(): string[] {
-  try {
-    const raw = localStorage.getItem(SUB_CATEGORIES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as string[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch { /* ignore */ }
-  try {
-    localStorage.setItem(SUB_CATEGORIES_KEY, JSON.stringify(DEFAULT_CATEGORIES));
-  } catch { /* ignore */ }
-  return [...DEFAULT_CATEGORIES];
-}
-
-function saveCategories(categories: string[]): void {
-  try {
-    localStorage.setItem(SUB_CATEGORIES_KEY, JSON.stringify(categories));
-  } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
-}
-
 export function useSubscriptionCategories() {
-  const [categories, setCategories] = useState<string[]>(loadCategories);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const handler = () => setCategories(loadCategories());
+    (async () => {
+      const { data, error } = await supabase.from('subscription_categories').select('*');
+      if (error || !data || data.length === 0) {
+        setCategories(DEFAULT_CATEGORIES);
+        setLoaded(true);
+        return;
+      }
+      setCategories(data.map((r) => r.name));
+      setLoaded(true);
+    })();
+
+    const handler = () => {
+      supabase.from('subscription_categories').select('*').then(({ data }) => {
+        setCategories(data && data.length > 0 ? data.map((r) => r.name) : DEFAULT_CATEGORIES);
+      });
+    };
     window.addEventListener(SUB_CATEGORIES_EVENT, handler);
     return () => window.removeEventListener(SUB_CATEGORIES_EVENT, handler);
   }, []);
@@ -47,7 +42,10 @@ export function useSubscriptionCategories() {
     setCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
       const next = [...prev, trimmed];
-      saveCategories(next);
+      supabase.from('subscription_categories').insert({ name: trimmed }).then(({ error }) => {
+        if (error) console.error('insert sub_category:', error.message);
+      });
+      window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
       return next;
     });
   }, []);
@@ -57,7 +55,10 @@ export function useSubscriptionCategories() {
     if (!trimmed) return;
     setCategories((prev) => {
       const next = prev.map((c) => c === oldName ? trimmed : c);
-      saveCategories(next);
+      supabase.from('subscription_categories').update({ name: trimmed }).eq('name', oldName).then(({ error }) => {
+        if (error) console.error('update sub_category:', error.message);
+      });
+      window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
       return next;
     });
   }, []);
@@ -65,10 +66,13 @@ export function useSubscriptionCategories() {
   const removeCategory = useCallback((name: string) => {
     setCategories((prev) => {
       const next = prev.filter((c) => c !== name);
-      saveCategories(next);
+      supabase.from('subscription_categories').delete().eq('name', name).then(({ error }) => {
+        if (error) console.error('delete sub_category:', error.message);
+      });
+      window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
       return next;
     });
   }, []);
 
-  return { categories, addCategory, updateCategory, removeCategory };
+  return { categories, addCategory, updateCategory, removeCategory, loaded };
 }

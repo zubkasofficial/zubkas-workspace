@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-export const EMP_CATEGORIES_KEY = 'zubkas_employee_categories';
 export const EMP_CATEGORIES_EVENT = 'emp_categories_updated';
 
 const DEFAULT_CATEGORIES = [
@@ -11,32 +11,27 @@ const DEFAULT_CATEGORIES = [
   'Accounts',
 ];
 
-function loadCategories(): string[] {
-  try {
-    const raw = localStorage.getItem(EMP_CATEGORIES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as string[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch { /* ignore */ }
-  try {
-    localStorage.setItem(EMP_CATEGORIES_KEY, JSON.stringify(DEFAULT_CATEGORIES));
-  } catch { /* ignore */ }
-  return [...DEFAULT_CATEGORIES];
-}
-
-function saveCategories(categories: string[]): void {
-  try {
-    localStorage.setItem(EMP_CATEGORIES_KEY, JSON.stringify(categories));
-  } catch { /* ignore */ }
-  window.dispatchEvent(new CustomEvent(EMP_CATEGORIES_EVENT));
-}
-
 export function useEmployeeCategories() {
-  const [categories, setCategories] = useState<string[]>(loadCategories);
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const handler = () => setCategories(loadCategories());
+    (async () => {
+      const { data, error } = await supabase.from('employee_categories').select('*');
+      if (error || !data || data.length === 0) {
+        setCategories(DEFAULT_CATEGORIES);
+        setLoaded(true);
+        return;
+      }
+      setCategories(data.map((r) => r.name));
+      setLoaded(true);
+    })();
+
+    const handler = () => {
+      supabase.from('employee_categories').select('*').then(({ data }) => {
+        setCategories(data && data.length > 0 ? data.map((r) => r.name) : DEFAULT_CATEGORIES);
+      });
+    };
     window.addEventListener(EMP_CATEGORIES_EVENT, handler);
     return () => window.removeEventListener(EMP_CATEGORIES_EVENT, handler);
   }, []);
@@ -47,7 +42,10 @@ export function useEmployeeCategories() {
     setCategories((prev) => {
       if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
       const next = [...prev, trimmed];
-      saveCategories(next);
+      supabase.from('employee_categories').insert({ name: trimmed }).then(({ error }) => {
+        if (error) console.error('insert emp_category:', error.message);
+      });
+      window.dispatchEvent(new CustomEvent(EMP_CATEGORIES_EVENT));
       return next;
     });
   }, []);
@@ -55,10 +53,13 @@ export function useEmployeeCategories() {
   const removeCategory = useCallback((name: string) => {
     setCategories((prev) => {
       const next = prev.filter((c) => c !== name);
-      saveCategories(next);
+      supabase.from('employee_categories').delete().eq('name', name).then(({ error }) => {
+        if (error) console.error('delete emp_category:', error.message);
+      });
+      window.dispatchEvent(new CustomEvent(EMP_CATEGORIES_EVENT));
       return next;
     });
   }, []);
 
-  return { categories, addCategory, removeCategory };
+  return { categories, addCategory, removeCategory, loaded };
 }

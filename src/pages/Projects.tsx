@@ -6,18 +6,8 @@ import { ProjectModal } from '@/components/ProjectModal';
 import { ProjectTaskModal } from '@/components/ProjectTaskModal';
 import { useProjectTasks, isOverdue } from '@/hooks/useProjectTasks';
 import { useAuth } from '@/context/AuthContext';
-import type { Employee, Project, ProjectStatus } from '@/types';
-
-function loadEmployees(): Employee[] {
-  try {
-    const raw = localStorage.getItem('zubkas_employees_data');
-    if (raw) {
-      const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch { /* ignore */ }
-  return [];
-}
+import { useEmployees } from '@/hooks/useEmployees';
+import type { Project, ProjectStatus } from '@/types';
 
 const columns: { status: ProjectStatus; color: string }[] = [
   { status: 'Not Started', color: 'bg-slate-400' },
@@ -30,8 +20,8 @@ export function Projects() {
   const { db, updateProjectStatus } = useWorkspace();
   const { tasks, getProjectTasks } = useProjectTasks();
   const { user } = useAuth();
+  const { employees: allEmployees } = useEmployees();
   const isEmployee = user?.role === 'employee';
-  const allEmployees = loadEmployees();
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 

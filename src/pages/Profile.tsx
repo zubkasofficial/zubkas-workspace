@@ -3,6 +3,7 @@ import { Calendar, Eye, EyeOff, Mail, Save, Shield, User as UserIcon } from 'luc
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useEmployees } from '@/hooks/useEmployees';
+import { useSettings } from '@/context/SettingsContext';
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
 const labelClass = 'mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300';
@@ -12,6 +13,7 @@ export function Profile() {
   const { user, updateUser } = useAuth();
   const { showToast } = useToast();
   const { employees, updateEmployee } = useEmployees();
+  const { updateAdminCredentials } = useSettings();
 
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -34,10 +36,7 @@ export function Profile() {
     if (password && password.length < 4) { showToast('Password must be at least 4 characters', 'error'); return; }
 
     if (user.role === 'admin') {
-      try { localStorage.setItem('zubkas_settings_admin_email', email.trim()); } catch { /* ignore */ }
-      if (password) {
-        try { localStorage.setItem('zubkas_settings_admin_password', btoa(password)); } catch { /* ignore */ }
-      }
+      updateAdminCredentials(email.trim(), password || undefined);
     } else if (employeeRecord) {
       updateEmployee(employeeRecord.id, {
         name: name.trim(),

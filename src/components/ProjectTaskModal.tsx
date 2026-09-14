@@ -1,8 +1,9 @@
 import { SquareCheck as CheckSquare, Plus, Trash2, CalendarClock, CircleUser as UserCircle, Users, ChevronDown, Save } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
-import type { Employee, Project, ProjectStatus } from '@/types';
+import type { Project, ProjectStatus } from '@/types';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useProjectTasks, isOverdue, type ProjectTask } from '@/hooks/useProjectTasks';
+import { useEmployees } from '@/hooks/useEmployees';
 import { formatCurrency, todayISO } from '@/utils/calculations';
 import { useToast } from '@/context/ToastContext';
 
@@ -13,21 +14,11 @@ interface ProjectTaskModalProps {
 
 const STATUSES: ProjectStatus[] = ['Not Started', 'In Progress', 'In Review', 'Completed'];
 
-function loadActiveEmployees(): Employee[] {
-  try {
-    const raw = localStorage.getItem('zubkas_employees_data');
-    if (raw) {
-      const parsed = JSON.parse(raw) as Employee[];
-      if (Array.isArray(parsed)) return parsed.filter((e) => e.status === 'Active');
-    }
-  } catch { /* ignore */ }
-  return [];
-}
-
 export function ProjectTaskModal({ project, onClose }: ProjectTaskModalProps) {
   const { db, updateProject } = useWorkspace();
   const { getProjectTasks, addTask, toggleTask, deleteTask, updateTask } = useProjectTasks();
   const { showToast } = useToast();
+  const { employees: allEmployees } = useEmployees();
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(todayISO());
   const [assignedToId, setAssignedToId] = useState('');
@@ -37,7 +28,7 @@ export function ProjectTaskModal({ project, onClose }: ProjectTaskModalProps) {
   const [localAssignedMemberIds, setLocalAssignedMemberIds] = useState<string[]>([]);
   const [localStatus, setLocalStatus] = useState<ProjectStatus>('Not Started');
 
-  const employees = loadActiveEmployees();
+  const employees = allEmployees.filter((e) => e.status === 'Active');
 
   useEffect(() => {
     if (project) {
