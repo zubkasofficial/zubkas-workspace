@@ -7,6 +7,8 @@ import { useSettings } from '@/context/SettingsContext';
 import { getAllPermissions } from '@/utils/permissions';
 import { supabase } from '@/lib/supabase';
 import type { CurrentUser } from '@/types';
+import whiteLogo from '@/assets/icon_white.png';
+import mainLogo from '@/assets/zubkas-logo.png';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -347,7 +349,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         {/* Brand header */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <img src="/icon_white.png" alt="Zubkas Workspace" className="w-10 h-10 object-contain rounded-md" />
+            <img src={whiteLogo} alt="Zubkas Workspace" className="h-8 w-auto object-contain rounded-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <div>
               <h1 className="text-base font-bold tracking-tight text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-white/60">Business Management Suite</p>
@@ -395,7 +397,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         <div className="my-auto w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           {/* Mobile brand header — visible on all sizes */}
           <div className="mb-6 flex items-center gap-3">
-            <img src="/icon_white.png" alt="Zubkas Workspace" className="h-8 w-auto rounded-md bg-slate-900 p-1 dark:bg-slate-800" />
+            <img src={mainLogo} alt="Zubkas Workspace" className="h-8 w-auto object-contain rounded-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">Business Management Suite</p>

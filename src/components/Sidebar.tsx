@@ -2,6 +2,7 @@ import { LayoutDashboard, Users, FileText, Receipt, CreditCard, Calculator, Fold
 import { useState } from 'react';
 import { hasPermission } from '@/utils/permissions';
 import { useAuth } from '@/context/AuthContext';
+import whiteLogo from '@/assets/icon_white.png';
 
 export type PageKey =
   | 'dashboard'
@@ -74,7 +75,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
         aria-label="Open sidebar"
       >
         <Menu className="h-5 w-5" />
-        <img src="/icon_white.png" alt="Zubkas" className="h-6 w-6 object-contain rounded" />
+        <img src={whiteLogo} alt="Zubkas" className="h-8 w-auto object-contain rounded" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         <span className="text-xs font-bold">Zubkas</span>
       </button>
 
@@ -89,7 +90,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
       >
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <img src="/icon_white.png" alt="Zubkas Workspace" className="w-8 h-8 object-contain rounded-md" />
+            <img src={whiteLogo} alt="Zubkas Workspace" className="h-8 w-auto object-contain rounded-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
             <div>
               <h1 className="text-sm font-bold text-white">Zubkas Workspace</h1>
             </div>
