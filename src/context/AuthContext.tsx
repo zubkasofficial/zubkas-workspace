@@ -1,13 +1,16 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { CurrentUser } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 const AUTH_USER_KEY = 'zubkas_auth_user';
 
 interface AuthContextValue {
   user: CurrentUser | null;
+  passwordRecovery: boolean;
   login: (user: CurrentUser, remember: boolean) => void;
   logout: () => void;
   updateUser: (updates: Partial<CurrentUser>) => void;
+  clearPasswordRecovery: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -22,6 +25,20 @@ function loadUser(): CurrentUser | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(loadUser);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      (async () => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setPasswordRecovery(true);
+        }
+      })();
+    });
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
 
   const login = useCallback((u: CurrentUser, remember: boolean) => {
     setUser(u);
@@ -37,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(AUTH_USER_KEY);
       sessionStorage.removeItem(AUTH_USER_KEY);
     } catch { /* ignore */ }
+    supabase.auth.signOut().catch(() => {});
   }, []);
 
   const updateUser = useCallback((updates: Partial<CurrentUser>) => {
@@ -53,8 +71,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const clearPasswordRecovery = useCallback(() => {
+    setPasswordRecovery(false);
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, passwordRecovery, login, logout, updateUser, clearPasswordRecovery }}>
       {children}
     </AuthContext.Provider>
   );

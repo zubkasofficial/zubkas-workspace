@@ -12,6 +12,7 @@ import { Subscriptions } from '@/pages/Subscriptions';
 import { Employees } from '@/pages/Employees';
 import { Profile } from '@/pages/Profile';
 import { Login } from '@/components/Login';
+import { PasswordRecoveryModal } from '@/components/PasswordRecoveryModal';
 import { WorkspaceProvider } from '@/context/WorkspaceContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -20,7 +21,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PERMISSION_KEYS, hasPermission } from '@/utils/permissions';
 
 function AppContent() {
-  const { user, logout } = useAuth();
+  const { user, logout, passwordRecovery, clearPasswordRecovery } = useAuth();
   const [currentPage, setCurrentPage] = useState<PageKey>('dashboard');
 
   useEffect(() => {
@@ -45,6 +46,9 @@ function AppContent() {
       <SettingsProvider>
         <ToastProvider>
           <Login onLogin={() => { /* state update handled by AuthContext */ }} />
+          {passwordRecovery && (
+            <PasswordRecoveryModal onClose={clearPasswordRecovery} />
+          )}
         </ToastProvider>
       </SettingsProvider>
     );
@@ -66,6 +70,9 @@ function AppContent() {
             {currentPage === 'profile' && <Profile />}
             {!['dashboard', 'invoices', 'accounting', 'projects', 'tasks', 'reports', 'subscriptions', 'employees', 'profile'].includes(currentPage) && <GenericPage page={currentPage as Exclude<PageKey, 'dashboard' | 'invoices' | 'accounting' | 'projects' | 'tasks' | 'reports' | 'subscriptions' | 'employees' | 'profile'>} />}
           </Layout>
+          {passwordRecovery && (
+            <PasswordRecoveryModal onClose={clearPasswordRecovery} />
+          )}
         </ToastProvider>
       </WorkspaceProvider>
     </SettingsProvider>

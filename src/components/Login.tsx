@@ -96,8 +96,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(async () => {
-      setLoading(false);
+    try {
       const adminEmailVal = getAdminEmail();
       const adminPasswordVal = getAdminPassword();
       const normalizedEmail = email.trim().toLowerCase();
@@ -115,47 +114,74 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         return;
       }
 
-      try {
-        const { data: employees } = await supabase.from('employees').select('*');
-        const match = (employees ?? []).find((emp: Record<string, unknown>) => (emp.email as string).toLowerCase() === normalizedEmail);
-        if (match) {
-          if (match.password !== password) {
-            showToast('Invalid credentials or account inactive', 'error');
-            return;
-          }
-          if (match.status !== 'Active') {
-            showToast('Invalid credentials or account inactive', 'error');
-            return;
-          }
-          const user: CurrentUser = {
-            role: 'employee',
-            name: match.name,
-            email: match.email,
-            permissions: match.permissions ?? {},
-            employeeId: match.id,
-          };
-          login(user, remember);
-          showToast('Welcome back! Login successful.');
-          onLogin();
-          return;
-        }
-      } catch { /* ignore */ }
+      const { data: employees, error: empError } = await supabase.from('employees').select('*');
+      if (empError) {
+        showToast('Unable to connect to server. Please try again.', 'error');
+        return;
+      }
 
-      showToast('Invalid credentials or account inactive', 'error');
-    }, 800);
+      const match = (employees ?? []).find(
+        (emp: Record<string, unknown>) => (emp.email as string).toLowerCase() === normalizedEmail,
+      );
+      if (!match) {
+        showToast('Invalid credentials or account not found', 'error');
+        return;
+      }
+      if (match.password !== password) {
+        showToast('Invalid credentials or account not found', 'error');
+        return;
+      }
+      if (match.status !== 'Active') {
+        showToast('Your account is inactive. Contact your administrator.', 'error');
+        return;
+      }
+
+      const user: CurrentUser = {
+        role: 'employee',
+        name: match.name as string,
+        email: match.email as string,
+        permissions: (match.permissions as Record<string, boolean>) ?? {},
+        employeeId: match.id as string,
+      };
+      login(user, remember);
+      showToast('Welcome back! Login successful.');
+      onLogin();
+    } catch {
+      showToast('Login failed. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!otpEmail.trim()) { showToast('Please enter your email address', 'error'); return; }
+    if (!otpEmail.trim()) {
+      showToast('Please enter your email address', 'error');
+      return;
+    }
     setOtpLoading(true);
-    setTimeout(() => {
-      setOtpLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: otpEmail.trim(),
+        options: { shouldCreateUser: false },
+      });
+      if (error) {
+        if (error.message.toLowerCase().includes('not confirmed') || error.message.toLowerCase().includes('not found')) {
+          showToast('No account found with this email address', 'error');
+        } else {
+          showToast(error.message || 'Failed to send OTP', 'error');
+        }
+        return;
+      }
       setOtpStage('verify');
       setOtpTimer(30);
       showToast('OTP sent to your email address');
       setTimeout(() => otpRefs.current[0]?.focus(), 100);
-    }, 600);
+    } catch {
+      showToast('Failed to send OTP. Please try again.', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   const handleOtpChange = (index: number, value: string) => {
@@ -179,39 +205,109 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     }
   };
 
-  const handleOtpVerify = (e: React.FormEvent) => {
+  const handleOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpDigits.join('').length < 6) { showToast('Please enter the 6-digit code', 'error'); return; }
+    const token = otpDigits.join('');
+    if (token.length < 6) {
+      showToast('Please enter the 6-digit code', 'error');
+      return;
+    }
     setOtpLoading(true);
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: otpEmail.trim(),
+        token,
+        type: 'email',
+      });
+      if (error) {
+        showToast(error.message || 'Invalid OTP code', 'error');
+        return;
+      }
+
+      const authEmail = (data.user?.email ?? otpEmail).toLowerCase();
+
+      const adminEmailVal = getAdminEmail().toLowerCase();
+      if (authEmail === adminEmailVal) {
+        const user: CurrentUser = {
+          role: 'admin',
+          name: 'Administrator',
+          email: adminEmail,
+          permissions: getAllPermissions(),
+        };
+        login(user, true);
+        showToast('Welcome back! Login successful.');
+        onLogin();
+        return;
+      }
+
+      const { data: employees } = await supabase.from('employees').select('*');
+      const match = (employees ?? []).find(
+        (emp: Record<string, unknown>) => (emp.email as string).toLowerCase() === authEmail,
+      );
+      if (match && match.status === 'Active') {
+        const user: CurrentUser = {
+          role: 'employee',
+          name: match.name as string,
+          email: match.email as string,
+          permissions: (match.permissions as Record<string, boolean>) ?? {},
+          employeeId: match.id as string,
+        };
+        login(user, true);
+        showToast('Welcome back! Login successful.');
+        onLogin();
+      } else {
+        showToast('Account not found or inactive. Contact your administrator.', 'error');
+      }
+    } catch {
+      showToast('Verification failed. Please try again.', 'error');
+    } finally {
       setOtpLoading(false);
-      const user: CurrentUser = {
-        role: 'admin',
-        name: 'Administrator',
-        email: otpEmail || getAdminEmail(),
-        permissions: getAllPermissions(),
-      };
-      login(user, true);
-      showToast('Welcome back! Login successful.');
-      onLogin();
-    }, 700);
+    }
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (otpTimer > 0) return;
-    setOtpTimer(30);
-    showToast('OTP resent to your email address');
+    setOtpLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: otpEmail.trim(),
+        options: { shouldCreateUser: false },
+      });
+      if (error) {
+        showToast(error.message || 'Failed to resend OTP', 'error');
+        return;
+      }
+      setOtpTimer(30);
+      showToast('OTP resent to your email address');
+    } catch {
+      showToast('Failed to resend OTP', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
-  const handleForgotSubmit = (e: React.FormEvent) => {
+  const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!forgotEmail.trim()) { showToast('Please enter your email address', 'error'); return; }
+    if (!forgotEmail.trim()) {
+      showToast('Please enter your email address', 'error');
+      return;
+    }
     setForgotLoading(true);
-    setTimeout(() => {
-      setForgotLoading(false);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+        redirectTo: window.location.origin,
+      });
+      if (error) {
+        showToast(error.message || 'Failed to send reset link', 'error');
+        return;
+      }
       setForgotSent(true);
-      showToast('Password reset link sent to your email');
-    }, 700);
+      showToast('Password reset link sent to your email. Check your inbox.');
+    } catch {
+      showToast('Failed to send reset link. Please try again.', 'error');
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   const getAdminEmail = (): string => adminEmail || DEFAULT_ADMIN_EMAIL;
@@ -297,9 +393,9 @@ export function Login({ onLogin }: { onLogin: () => void }) {
       {/* RIGHT — Auth section */}
       <div className="flex w-full min-h-screen flex-col items-center justify-between bg-slate-50 p-6 text-slate-900 dark:bg-slate-950 dark:text-white sm:p-10 lg:w-1/2">
         <div className="my-auto w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-          {/* Mobile brand header */}
-          <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <img src="/zubkas-logo.png" alt="Zubkas Workspace" className="h-8 w-auto object-contain rounded-md" />
+          {/* Mobile brand header — visible on all sizes */}
+          <div className="mb-6 flex items-center gap-3">
+            <img src="/icon_white.png" alt="Zubkas Workspace" className="h-8 w-auto rounded-md bg-slate-900 p-1 dark:bg-slate-800" />
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">Business Management Suite</p>
@@ -445,9 +541,9 @@ export function Login({ onLogin }: { onLogin: () => void }) {
                         {otpTimer > 0 ? (
                           <span className="text-slate-400">Resend OTP in {otpTimer}s</span>
                         ) : (
-                          <button type="button" onClick={handleResendOtp} className="font-semibold text-brand-600 transition-colors hover:underline dark:text-brand-400">
+                          <button type="button" onClick={handleResendOtp} disabled={otpLoading} className="font-semibold text-brand-600 transition-colors hover:underline dark:text-brand-400 disabled:opacity-50">
                             Resend OTP
-                          </button>
+                        </button>
                         )}
                       </div>
                       <button type="button" onClick={() => { setOtpStage('request'); setOtpDigits(['', '', '', '', '', '']); setOtpTimer(0); }} className="flex w-full items-center justify-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:text-slate-400 dark:hover:text-white">
