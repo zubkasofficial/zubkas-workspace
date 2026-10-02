@@ -20,9 +20,46 @@ import { SettingsProvider } from '@/context/SettingsContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { PERMISSION_KEYS, hasPermission } from '@/utils/permissions';
 
+const STORAGE_KEY = 'zubkas_active_page';
+const VALID_PAGES: PageKey[] = [
+  'dashboard', 'clients', 'quotations', 'invoices', 'payments',
+  'accounting', 'projects', 'tasks', 'subscriptions', 'reports',
+  'employees', 'settings', 'profile',
+];
+
+function getInitialPage(): PageKey {
+  const hash = window.location.hash.replace('#', '');
+  if (hash && VALID_PAGES.includes(hash as PageKey)) return hash as PageKey;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && VALID_PAGES.includes(saved as PageKey)) return saved as PageKey;
+  } catch { /* ignore */ }
+  return 'dashboard';
+}
+
 function AppContent() {
   const { user, logout, passwordRecovery, clearPasswordRecovery } = useAuth();
-  const [currentPage, setCurrentPage] = useState<PageKey>('dashboard');
+  const [currentPage, setCurrentPage] = useState<PageKey>(getInitialPage);
+
+  const navigate = (page: PageKey) => {
+    setCurrentPage(page);
+    try { localStorage.setItem(STORAGE_KEY, page); } catch { /* ignore */ }
+    if (window.location.hash !== `#${page}`) {
+      window.location.hash = page;
+    }
+  };
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && VALID_PAGES.includes(hash as PageKey)) {
+        setCurrentPage(hash as PageKey);
+        try { localStorage.setItem(STORAGE_KEY, hash); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -32,13 +69,13 @@ function AppContent() {
       hasPermission(user.permissions ?? {}, currentPage);
     if (!isAllowed) {
       const firstAllowed = PERMISSION_KEYS.find((key) => hasPermission(user.permissions ?? {}, key));
-      setCurrentPage((firstAllowed as PageKey) ?? 'dashboard');
+      navigate((firstAllowed as PageKey) ?? 'dashboard');
     }
   }, [user, currentPage]);
 
   const handleLogout = () => {
     logout();
-    setCurrentPage('dashboard');
+    navigate('dashboard');
   };
 
   if (!user) {
@@ -58,8 +95,8 @@ function AppContent() {
     <SettingsProvider>
       <WorkspaceProvider>
         <ToastProvider>
-          <Layout currentPage={currentPage} onNavigate={setCurrentPage} onLogout={handleLogout}>
-            {currentPage === 'dashboard' && <Dashboard onNavigate={setCurrentPage} />}
+          <Layout currentPage={currentPage} onNavigate={navigate} onLogout={handleLogout}>
+            {currentPage === 'dashboard' && <Dashboard onNavigate={navigate} />}
             {currentPage === 'invoices' && <Invoices />}
             {currentPage === 'accounting' && <Accounting />}
             {currentPage === 'projects' && <Projects />}
