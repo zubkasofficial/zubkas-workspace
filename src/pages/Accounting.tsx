@@ -1,14 +1,31 @@
-import { Plus, TrendingDown, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
+import { useToast } from '@/context/ToastContext';
 import { TransactionModal } from '@/components/TransactionModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatCurrency } from '@/utils/calculations';
+import type { AccountingEntry } from '@/types';
 
 export function Accounting() {
-  const { db } = useWorkspace();
+  const { db, deleteAccountingEntry } = useWorkspace();
+  const { showToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AccountingEntry | null>(null);
+
   const income = useMemo(() => db.accounting.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + entry.amount, 0), [db.accounting]);
   const expenses = useMemo(() => db.accounting.filter((entry) => entry.type === 'expense').reduce((sum, entry) => sum + entry.amount, 0), [db.accounting]);
+
+  const isSyncedEntry = (entry: AccountingEntry) =>
+    entry.type === 'income' && entry.category === 'Invoice Payment';
+
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    deleteAccountingEntry(deleteTarget.id);
+    showToast('Transaction deleted successfully');
+    setDeleteTarget(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -28,7 +45,7 @@ export function Accounting() {
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {db.accounting.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left">
+            <table className="w-full min-w-[860px] text-left">
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800">
                   <th className="px-6 py-3">Description</th>
@@ -37,6 +54,7 @@ export function Accounting() {
                   <th className="px-6 py-3">Date</th>
                   <th className="px-6 py-3">Type</th>
                   <th className="px-6 py-3">Amount</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -48,6 +66,15 @@ export function Accounting() {
                     <td className="px-6 py-4 text-sm text-slate-500">{new Date(entry.date).toLocaleDateString('en-IN')}</td>
                     <td className={`px-6 py-4 text-sm font-semibold capitalize ${entry.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>{entry.type}</td>
                     <td className="px-6 py-4 text-sm font-bold text-slate-800 dark:text-slate-200">{formatCurrency(entry.amount)}</td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => setDeleteTarget(entry)}
+                        className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20"
+                        title="Delete transaction"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -61,6 +88,26 @@ export function Accounting() {
         )}
       </div>
       <TransactionModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete Transaction?"
+        message={
+          <>
+            <p>Are you sure you want to delete this transaction?</p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              <span className="font-semibold">{deleteTarget?.description}</span> — {deleteTarget ? formatCurrency(deleteTarget.amount) : ''}
+            </p>
+            {deleteTarget && isSyncedEntry(deleteTarget) && (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                This entry was auto-synced from a payment. Deleting it here only removes the accounting record — the original payment and invoice remain unaffected.
+              </p>
+            )}
+            <p className="mt-2 text-xs text-slate-400">This action cannot be undone.</p>
+          </>
+        }
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

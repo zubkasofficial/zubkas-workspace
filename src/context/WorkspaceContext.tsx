@@ -53,6 +53,7 @@ interface WorkspaceContextValue {
   deleteInvoice: (invoiceId: string) => void;
   deleteQuotation: (quotationId: string) => void;
   deletePayment: (paymentId: string) => void;
+  deleteAccountingEntry: (entryId: string) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -596,6 +597,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const deleteAccountingEntry = (entryId: string) => {
+    setDb((prev) => ({
+      ...prev,
+      accounting: prev.accounting.filter((entry) => entry.id !== entryId),
+    }));
+    deleteRow('accounting_entries', entryId);
+  };
+
   const syncSubscriptionsFromQuotations = () => {
     setDb((prev) => {
       const recurringQuotes = prev.quotations.filter((q) => q.quotationType === 'subscription');
@@ -639,7 +648,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment }}>
+    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
       {children}
     </WorkspaceContext.Provider>
   );
