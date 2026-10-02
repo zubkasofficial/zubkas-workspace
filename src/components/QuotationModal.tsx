@@ -591,7 +591,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
                             <>
                               {selectedAccount.upiId && <p><span className="font-medium">UPI:</span> {selectedAccount.upiId}</p>}
                               {selectedAccount.qrCode && (
-                                <img src={selectedAccount.qrCode} alt="UPI QR Code" className="mt-1 h-20 w-20 rounded-md border border-slate-200 object-contain dark:border-slate-700" />
+                                <img src={selectedAccount.qrCode} alt="UPI QR Code" className="mt-1 h-24 w-24 rounded-md border border-slate-200 object-contain dark:border-slate-700" style={{ imageRendering: 'crisp-edges', aspectRatio: '1 / 1' }} />
                               )}
                             </>
                           )}

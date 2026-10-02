@@ -152,7 +152,7 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
                     <>
                       {defaultPaymentAccount.upiId && <p><span className="font-medium">UPI:</span> {defaultPaymentAccount.upiId}</p>}
                       {defaultPaymentAccount.qrCode && (
-                        <img src={defaultPaymentAccount.qrCode} alt="UPI QR Code" className="mt-1 h-20 w-20 rounded-md border border-slate-200 object-contain dark:border-slate-700" />
+                        <img src={defaultPaymentAccount.qrCode} alt="UPI QR Code" className="mt-1 h-24 w-24 rounded-md border border-slate-200 object-contain dark:border-slate-700" style={{ imageRendering: 'crisp-edges', aspectRatio: '1 / 1' }} />
                       )}
                     </>
                   )}

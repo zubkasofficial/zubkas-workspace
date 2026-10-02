@@ -230,6 +230,7 @@ function PaymentAccountsCard({ showToast }: { showToast: (msg: string, type?: 's
                   )}
                 </div>
                 <input ref={(el) => { qrRefs.current[acc.id] = el; }} type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleQrUpload(acc.id, file); }} />
+                <p className="mt-2 text-[11px] text-slate-400">Recommended size: 512 x 512 pixels (PNG/JPG)</p>
               </div>
             </div>
           </div>
