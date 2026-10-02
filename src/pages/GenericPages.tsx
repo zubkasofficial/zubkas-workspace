@@ -186,7 +186,7 @@ function Quotations({ onDelete, onView }: { onDelete: (q: Quotation) => void; on
           </span>,
           <span className="text-slate-600 dark:text-slate-300">{db.clients.find((client) => client.id === item.clientId)?.name ?? 'Unknown'}</span>,
           <span className="text-slate-600 dark:text-slate-300">{new Date(item.validUntil).toLocaleDateString('en-IN')}</span>,
-          <span className="font-semibold text-slate-800 dark:text-slate-200">{currency(item.items.reduce((sum, line) => sum + line.quantity * line.rate, 0) * 1.18)}</span>,
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{currency(item.items.reduce((sum, line) => sum + line.quantity * line.rate, 0) * (item.taxEnabled === false ? 1 : 1.18))}</span>,
           <StatusBadge status={item.status} />,
           <div className="flex items-center gap-2">
             <button

@@ -389,13 +389,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         notes: quotation.notes,
         status: 'Unpaid',
         paidAmount: 0,
-        balanceDue: getInvoiceTotal(quotation.items),
+        balanceDue: quotation.taxEnabled === false
+          ? quotation.items.reduce((sum, item) => sum + item.quantity * item.rate, 0)
+          : getInvoiceTotal(quotation.items),
         createdAt: new Date().toISOString().split('T')[0],
         invoiceType: quotation.quotationType === 'subscription' ? 'recurring' : 'regular',
         subscriptionCategory: quotation.subscriptionCategory,
         subscriptionStartDate: quotation.subscriptionStartDate,
         subscriptionEndDate: quotation.subscriptionEndDate,
         referenceId: quotationId,
+        taxEnabled: quotation.taxEnabled !== false,
+        taxType: quotation.taxEnabled === false ? 'none' : (quotation.taxType ?? 'custom'),
+        taxRate: quotation.taxEnabled === false ? 0 : (quotation.taxRate ?? 18),
+        taxLabel: quotation.taxLabel,
       };
       const linkedSub = prev.subscriptions.find((s) => s.referenceId === quotationId);
       const updatedQuote = { ...quotation, status: 'Accepted' as const };
@@ -598,7 +604,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       for (const quote of recurringQuotes) {
         if (existingIds.has(quote.id)) continue;
         const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-        const grandTotal = subtotal * 1.18;
+        const taxMultiplier = quote.taxEnabled === false ? 1 : (1 + (quote.taxRate ?? 18) / 100);
+        const grandTotal = subtotal * taxMultiplier;
         const sub: Subscription = {
           id: generateId('sub'),
           name: quote.items[0]?.description || 'Recurring Subscription',

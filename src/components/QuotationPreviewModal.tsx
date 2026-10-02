@@ -20,8 +20,9 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
 
   const client = db.clients.find((c) => c.id === quotation.clientId);
   const subtotal = getSubtotal(quotation.items);
-  const taxRate = settings.tax.rate || 18;
-  const taxAmount = (subtotal * taxRate) / 100;
+  const taxEnabled = quotation.taxEnabled !== false && quotation.taxType !== 'none';
+  const taxRate = taxEnabled ? (quotation.taxRate ?? settings.tax.rate ?? 18) : 0;
+  const taxAmount = taxEnabled ? (subtotal * taxRate) / 100 : 0;
   const cgst = taxAmount / 2;
   const sgst = taxAmount / 2;
   const total = subtotal + taxAmount;
@@ -108,7 +109,7 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
         <div className="flex justify-end">
           <div className="w-64 space-y-2 text-sm">
             <div className="flex justify-between text-slate-500"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-            {isGst ? <><div className="flex justify-between text-slate-500"><span>CGST ({taxRate / 2}%)</span><span>{formatCurrency(cgst)}</span></div><div className="flex justify-between text-slate-500"><span>SGST ({taxRate / 2}%)</span><span>{formatCurrency(sgst)}</span></div></> : <div className="flex justify-between text-slate-500"><span>{taxLabel} ({taxRate}%)</span><span>{formatCurrency(taxAmount)}</span></div>}
+            {taxEnabled && isGst ? <><div className="flex justify-between text-slate-500"><span>CGST ({taxRate / 2}%)</span><span>{formatCurrency(cgst)}</span></div><div className="flex justify-between text-slate-500"><span>SGST ({taxRate / 2}%)</span><span>{formatCurrency(sgst)}</span></div></> : taxEnabled ? <div className="flex justify-between text-slate-500"><span>{taxLabel} ({taxRate}%)</span><span>{formatCurrency(taxAmount)}</span></div> : null}
             <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-bold text-slate-900 dark:border-slate-700 dark:text-white"><span>Grand Total</span><span>{formatCurrency(total)}</span></div>
           </div>
         </div>
