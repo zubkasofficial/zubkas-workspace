@@ -29,6 +29,7 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
   const isSubscription = quotation.quotationType === 'subscription';
   const taxLabel = profile.taxLabel || settings.tax.name || 'Tax';
   const isGst = taxLabel.toUpperCase() === 'GST';
+  const displayTerms = quotation.terms ?? settings.terms;
 
   return (
     <Modal open={Boolean(quotation)} onClose={onClose} title={`Quotation Preview · ${quotation.quoteNumber}`} size="lg">

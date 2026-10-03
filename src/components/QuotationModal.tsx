@@ -135,6 +135,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
       discountUnit,
       showBankDetails,
       showUpiDetails,
+      terms: [...terms],
     };
     addQuotation(quotation);
     if (quotType === 'subscription') {
