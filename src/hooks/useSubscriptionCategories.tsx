@@ -3,80 +3,134 @@ import { supabase } from '@/lib/supabase';
 
 export const SUB_CATEGORIES_EVENT = 'sub_categories_updated';
 
-function dedupeByName(names: string[]): string[] {
+let sharedCategories: string[] = [];
+let sharedLoaded = false;
+let fetchPromise: Promise<void> | null = null;
+
+async function fetchFromSupabase(): Promise<void> {
+  const { data, error } = await supabase
+    .from('subscription_categories')
+    .select('*')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('[subscription_categories] fetch failed:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    return;
+  }
+
   const seen = new Set<string>();
-  const result: string[] = [];
-  for (const name of names) {
-    const key = name.toLowerCase();
+  const names: string[] = [];
+  for (const row of data ?? []) {
+    const key = (row.name ?? '').toLowerCase();
     if (!seen.has(key)) {
       seen.add(key);
-      result.push(name);
+      names.push(row.name);
     }
   }
-  return result;
+  sharedCategories = names;
+  sharedLoaded = true;
+  window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
+}
+
+function ensureFetched(): Promise<void> {
+  if (!fetchPromise) {
+    fetchPromise = fetchFromSupabase().finally(() => { fetchPromise = null; });
+  }
+  return fetchPromise;
 }
 
 export function useSubscriptionCategories() {
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  const fetchCategories = useCallback(async () => {
-    const { data, error } = await supabase.from('subscription_categories').select('*');
-    if (error) {
-      console.error('fetch sub_categories:', error.message);
-      return;
-    }
-    const names = dedupeByName((data ?? []).map((r) => r.name));
-    setCategories(names);
-  }, []);
+  const [categories, setCategories] = useState<string[]>(sharedCategories);
+  const [loaded, setLoaded] = useState(sharedLoaded);
 
   useEffect(() => {
-    (async () => {
-      await fetchCategories();
-      setLoaded(true);
-    })();
+    if (!sharedLoaded) {
+      ensureFetched();
+    }
+    setCategories(sharedCategories);
+    setLoaded(sharedLoaded);
 
-    const handler = () => { fetchCategories(); };
+    const handler = () => {
+      setCategories(sharedCategories);
+      setLoaded(sharedLoaded);
+    };
     window.addEventListener(SUB_CATEGORIES_EVENT, handler);
     return () => window.removeEventListener(SUB_CATEGORIES_EVENT, handler);
-  }, [fetchCategories]);
+  }, []);
 
-  const addCategory = useCallback((name: string) => {
+  const addCategory = useCallback(async (name: string): Promise<boolean> => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    setCategories((prev) => {
-      if (prev.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return prev;
-      const next = dedupeByName([...prev, trimmed]);
-      supabase.from('subscription_categories').insert({ name: trimmed }).then(({ error }) => {
-        if (error) console.error('insert sub_category:', error.message);
+    if (!trimmed) return false;
+    if (sharedCategories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return false;
+
+    const { error } = await supabase
+      .from('subscription_categories')
+      .insert([{ name: trimmed }]);
+
+    if (error) {
+      console.error('[subscription_categories] insert failed:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        name: trimmed,
       });
-      window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
-      return next;
-    });
+      return false;
+    }
+
+    await fetchFromSupabase();
+    return true;
   }, []);
 
-  const updateCategory = useCallback((oldName: string, newName: string) => {
+  const updateCategory = useCallback(async (oldName: string, newName: string): Promise<boolean> => {
     const trimmed = newName.trim();
-    if (!trimmed) return;
-    setCategories((prev) => {
-      const next = dedupeByName(prev.map((c) => c === oldName ? trimmed : c));
-      supabase.from('subscription_categories').update({ name: trimmed }).eq('name', oldName).then(({ error }) => {
-        if (error) console.error('update sub_category:', error.message);
+    if (!trimmed) return false;
+
+    const { error } = await supabase
+      .from('subscription_categories')
+      .update({ name: trimmed })
+      .eq('name', oldName);
+
+    if (error) {
+      console.error('[subscription_categories] update failed:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        oldName,
+        newName: trimmed,
       });
-      window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
-      return next;
-    });
+      return false;
+    }
+
+    await fetchFromSupabase();
+    return true;
   }, []);
 
-  const removeCategory = useCallback((name: string) => {
-    setCategories((prev) => {
-      const next = prev.filter((c) => c !== name);
-      supabase.from('subscription_categories').delete().eq('name', name).then(({ error }) => {
-        if (error) console.error('delete sub_category:', error.message);
+  const removeCategory = useCallback(async (name: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('subscription_categories')
+      .delete()
+      .eq('name', name);
+
+    if (error) {
+      console.error('[subscription_categories] delete failed:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        name,
       });
-      window.dispatchEvent(new CustomEvent(SUB_CATEGORIES_EVENT));
-      return next;
-    });
+      return false;
+    }
+
+    await fetchFromSupabase();
+    return true;
   }, []);
 
   return { categories, addCategory, updateCategory, removeCategory, loaded };
