@@ -165,7 +165,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: otpEmail.trim(),
-        options: { shouldCreateUser: false },
+        options: { shouldCreateUser: true },
       });
       if (error) {
         if (error.message.toLowerCase().includes('not confirmed') || error.message.toLowerCase().includes('not found')) {
