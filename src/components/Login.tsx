@@ -18,7 +18,7 @@ interface BeforeInstallPromptEvent extends Event {
 type Tab = 'password' | 'otp';
 type View = 'login' | 'forgot';
 
-const DEFAULT_ADMIN_EMAIL = 'admin@zubkas.com';
+const DEFAULT_ADMIN_EMAIL = 'zubkastechnology@gmail.com';
 const DEFAULT_ADMIN_PASSWORD = 'admin123';
 
 const FEATURES = [
