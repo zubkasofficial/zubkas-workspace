@@ -16,23 +16,15 @@ export function SubscriptionCategoryModal({ open, onClose }: SubscriptionCategor
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
-  const [saving, setSaving] = useState(false);
-
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!newCategory.trim()) return;
     if (categories.some((c) => c.toLowerCase() === newCategory.trim().toLowerCase())) {
       showToast('Category already exists', 'error');
       return;
     }
-    setSaving(true);
-    const ok = await addCategory(newCategory);
-    setSaving(false);
-    if (ok) {
-      setNewCategory('');
-      showToast('Category added');
-    } else {
-      showToast('Failed to add category', 'error');
-    }
+    addCategory(newCategory);
+    setNewCategory('');
+    showToast('Category added');
   };
 
   const handleStartEdit = (index: number) => {
@@ -40,33 +32,21 @@ export function SubscriptionCategoryModal({ open, onClose }: SubscriptionCategor
     setEditingValue(categories[index]);
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = () => {
     if (editingIndex === null) return;
     if (!editingValue.trim()) {
       setEditingIndex(null);
       return;
     }
-    setSaving(true);
-    const ok = await updateCategory(categories[editingIndex], editingValue);
-    setSaving(false);
+    updateCategory(categories[editingIndex], editingValue);
     setEditingIndex(null);
     setEditingValue('');
-    if (ok) {
-      showToast('Category updated');
-    } else {
-      showToast('Failed to update category', 'error');
-    }
+    showToast('Category updated');
   };
 
-  const handleDelete = async (name: string) => {
-    setSaving(true);
-    const ok = await removeCategory(name);
-    setSaving(false);
-    if (ok) {
-      showToast('Category deleted');
-    } else {
-      showToast('Failed to delete category', 'error');
-    }
+  const handleDelete = (name: string) => {
+    removeCategory(name);
+    showToast('Category deleted');
   };
 
   return (
@@ -97,7 +77,7 @@ export function SubscriptionCategoryModal({ open, onClose }: SubscriptionCategor
                     autoFocus
                     className={`${inputClass} py-2`}
                   />
-                  <button onClick={handleSaveEdit} disabled={saving} className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50" aria-label="Save">
+                  <button onClick={handleSaveEdit} className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700" aria-label="Save">
                     <Check className="h-4 w-4" />
                   </button>
                   <button onClick={() => { setEditingIndex(null); setEditingValue(''); }} className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-700" aria-label="Cancel">
@@ -110,7 +90,7 @@ export function SubscriptionCategoryModal({ open, onClose }: SubscriptionCategor
                   <button onClick={() => handleStartEdit(index)} className="text-slate-400 transition-colors hover:text-brand-600" aria-label="Edit">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  <button onClick={() => handleDelete(category)} disabled={saving} className="text-slate-400 transition-colors hover:text-rose-600 disabled:opacity-50" aria-label="Delete">
+                  <button onClick={() => handleDelete(category)} className="text-slate-400 transition-colors hover:text-rose-600" aria-label="Delete">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </>
@@ -134,8 +114,7 @@ export function SubscriptionCategoryModal({ open, onClose }: SubscriptionCategor
             />
             <button
               onClick={handleAdd}
-              disabled={saving}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
             >
               <Plus className="h-4 w-4" /> Add
             </button>

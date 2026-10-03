@@ -74,13 +74,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
       setNewTerm('');
       setShowPreview(true);
     }
-  }, [open, db.clients, db.quotations.length, taxSettings.enabled, paymentAccounts, settings.terms]);
-
-  useEffect(() => {
-    if (open && quotType === 'subscription' && !subCategory && subCategories.length > 0) {
-      setSubCategory(subCategories[0]);
-    }
-  }, [open, quotType, subCategory, subCategories]);
+  }, [open, db.clients, db.quotations.length, taxSettings.enabled, paymentAccounts, settings.terms, subCategories]);
 
   const updateItem = (id: string, field: keyof QuoteItem, value: string) =>
     setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: field === 'quantity' || field === 'rate' ? Number(value) : value } : item));
@@ -141,7 +135,6 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
       discountUnit,
       showBankDetails,
       showUpiDetails,
-      terms: [...terms],
     };
     addQuotation(quotation);
     if (quotType === 'subscription') {

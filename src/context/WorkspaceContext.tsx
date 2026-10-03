@@ -86,7 +86,6 @@ function rowToQuotation(r: Record<string, unknown>): Quotation {
     taxEnabled: r.tax_enabled, taxType: r.tax_type, taxRate: r.tax_rate, taxLabel: r.tax_label,
     discountValue: r.discount_value, discountUnit: r.discount_unit,
     showBankDetails: r.show_bank_details, showUpiDetails: r.show_upi_details,
-    terms: r.terms ?? undefined,
   };
 }
 function quotationToRow(q: Quotation) {
@@ -98,7 +97,6 @@ function quotationToRow(q: Quotation) {
     tax_enabled: q.taxEnabled, tax_type: q.taxType, tax_rate: q.taxRate, tax_label: q.taxLabel,
     discount_value: q.discountValue, discount_unit: q.discountUnit,
     show_bank_details: q.showBankDetails, show_upi_details: q.showUpiDetails,
-    terms: q.terms ?? null,
   };
 }
 

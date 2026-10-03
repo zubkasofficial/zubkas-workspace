@@ -29,7 +29,6 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
   const isSubscription = quotation.quotationType === 'subscription';
   const taxLabel = profile.taxLabel || settings.tax.name || 'Tax';
   const isGst = taxLabel.toUpperCase() === 'GST';
-  const displayTerms = quotation.terms ?? settings.terms;
 
   return (
     <Modal open={Boolean(quotation)} onClose={onClose} title={`Quotation Preview · ${quotation.quoteNumber}`} size="lg">
@@ -128,13 +127,13 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">Terms &amp; Conditions</p>
             <ol className="space-y-1 text-xs text-slate-500">
-              {displayTerms.map((term, i) => (
+              {settings.terms.map((term, i) => (
                 <li key={i} className="flex gap-1.5">
                   <span className="font-semibold text-slate-400">{i + 1}.</span>
                   <span>{term}</span>
                 </li>
               ))}
-              {displayTerms.length === 0 && <li className="text-slate-400">No terms specified</li>}
+              {settings.terms.length === 0 && <li className="text-slate-400">No terms specified</li>}
             </ol>
           </div>
           {(quotation.showBankDetails !== false || quotation.showUpiDetails !== false) && (

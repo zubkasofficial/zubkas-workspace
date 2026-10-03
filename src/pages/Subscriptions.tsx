@@ -1,4 +1,4 @@
-import { CalendarDays, Pause, Play, Plus, Repeat, Search, Settings as SettingsIcon, Trash2, RefreshCw, FileText, TrendingUp, Calendar, DollarSign, Eye, Tag } from 'lucide-react';
+import { CalendarDays, Pause, Play, Plus, Repeat, Search, Settings as SettingsIcon, Trash2, RefreshCw, FileText, TrendingUp, Calendar, DollarSign, Eye } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
@@ -188,11 +188,10 @@ export function Subscriptions() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard title="Active Subscriptions" value={String(activeCount)} icon={Repeat} color="brand" />
         <StatCard title="Monthly Recurring Revenue" value={formatCurrency(mrr)} icon={DollarSign} color="emerald" />
         <StatCard title="Annual Recurring Revenue" value={formatCurrency(arr)} icon={Calendar} color="amber" />
-        <StatCard title="Total Categories" value={String(categories.length)} icon={Tag} color="brand" />
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
