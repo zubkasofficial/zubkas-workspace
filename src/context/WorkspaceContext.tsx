@@ -86,6 +86,7 @@ function rowToQuotation(r: Record<string, unknown>): Quotation {
     taxEnabled: r.tax_enabled, taxType: r.tax_type, taxRate: r.tax_rate, taxLabel: r.tax_label,
     discountValue: r.discount_value, discountUnit: r.discount_unit,
     showBankDetails: r.show_bank_details, showUpiDetails: r.show_upi_details,
+    terms: r.terms,
   };
 }
 function quotationToRow(q: Quotation) {
@@ -97,6 +98,7 @@ function quotationToRow(q: Quotation) {
     tax_enabled: q.taxEnabled, tax_type: q.taxType, tax_rate: q.taxRate, tax_label: q.taxLabel,
     discount_value: q.discountValue, discount_unit: q.discountUnit,
     show_bank_details: q.showBankDetails, show_upi_details: q.showUpiDetails,
+    terms: q.terms,
   };
 }
 
@@ -247,7 +249,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       paymentNumber: generatePaymentNumber(prev.payments.length),
     };
     const accounting = newAccountingEntry('income', amount, 'Invoice Payment', `Payment received for ${invoice.invoiceNumber}`, reference || invoice.invoiceNumber);
-    const hasProject = prev.projects.some((project) => project.invoiceId === invoice.id);
+    const isRecurring = invoice.invoiceType === 'recurring';
+    const hasProject = isRecurring || prev.projects.some((project) => project.invoiceId === invoice.id);
     const clientName = prev.clients.find((client) => client.id === invoice.clientId)?.name ?? invoice.invoiceNumber;
     const project: Project = {
       ...newProject(`Project - ${clientName}`, invoice.clientId, getInvoiceTotal(invoice.items)),

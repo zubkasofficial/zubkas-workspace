@@ -45,6 +45,7 @@ export interface Quotation {
   discountUnit?: 'flat' | 'percent';
   showBankDetails?: boolean;
   showUpiDetails?: boolean;
+  terms?: string[];
 }
 
 export interface InvoiceItem {

@@ -87,6 +87,9 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
 
   const removeTerm = (index: number) => setTerms((prev) => prev.filter((_, i) => i !== index));
 
+  const editTerm = (index: number, value: string) =>
+    setTerms((prev) => prev.map((term, i) => (i === index ? value : term)));
+
   const selectedClient = db.clients.find((c) => c.id === clientId);
   const selectedAccount = paymentAccounts.find((a) => a.id === paymentAccountId);
 
@@ -135,6 +138,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
       discountUnit,
       showBankDetails,
       showUpiDetails,
+      terms,
     };
     addQuotation(quotation);
     if (quotType === 'subscription') {
@@ -420,7 +424,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
                   {terms.map((term, index) => (
                     <div key={index} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
                       <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">{index + 1}</span>
-                      <p className="flex-1 text-xs text-slate-700 dark:text-slate-300">{term}</p>
+                      <input value={term} onChange={(e) => editTerm(index, e.target.value)} className={`${smallInput} flex-1 border-0 bg-transparent px-0 text-xs`} />
                       <button type="button" onClick={() => removeTerm(index)} className="text-slate-400 transition-colors hover:text-rose-600"><X className="h-3.5 w-3.5" /></button>
                     </div>
                   ))}
