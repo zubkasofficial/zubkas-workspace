@@ -89,6 +89,9 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   }, [showToast]);
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isEdge = /Edg\//i.test(navigator.userAgent);
+  const isDesktop = !isIOS && !isAndroid;
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -583,59 +586,123 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
       {/* Install Guide Modal */}
       {showInstallGuide && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
           <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setShowInstallGuide(false)} />
-          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
-            <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600/10 text-brand-600 dark:bg-brand-600/20 dark:text-brand-400">
-                <Smartphone className="h-5 w-5" />
+          <div className="relative flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600/10 text-brand-600 dark:bg-brand-600/20 dark:text-brand-400">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white sm:text-lg">Install Zubkas App</h2>
               </div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Install Zubkas App</h2>
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                aria-label="Close"
+              >
+                <Download className="h-4 w-4 rotate-180" />
+              </button>
             </div>
-            <div className="px-6 py-5">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                To install the app on your device:
-              </p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-500 dark:text-slate-400">
-                {isIOS ? <>
-                  <li className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">1</span>
-                    <span>Tap the <span className="font-semibold text-slate-700 dark:text-slate-200">Share</span> button at the bottom of the screen.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">2</span>
-                    <span>Select <span className="font-semibold text-slate-700 dark:text-slate-200">"Add to Home Screen"</span> from the options.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">3</span>
-                    <span>Tap <span className="font-semibold text-slate-700 dark:text-slate-200">"Add"</span> to add Zubkas to your home screen.</span>
-                  </li>
-                </> : <>
-                  <li className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">1</span>
-                    <span>Tap the browser menu icon <span className="font-semibold text-slate-700 dark:text-slate-200">(⋮)</span> in the top right corner.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">2</span>
-                    <span>Select <span className="font-semibold text-slate-700 dark:text-slate-200">"Install App"</span> or <span className="font-semibold text-slate-700 dark:text-slate-200">"Add to Home Screen"</span>.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">3</span>
-                    <span>Confirm the prompt to add Zubkas to your device.</span>
-                  </li>
-                </>}
-              </ul>
-              <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-400 dark:bg-slate-800">
-                {isIOS ? 'iOS Safari does not support automatic installation prompts.' : 'On desktop Chrome or Edge, click the install icon in the address bar.'}
-              </p>
-              <div className="mt-5 flex justify-end">
-                <button
-                  onClick={() => setShowInstallGuide(false)}
-                  className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
-                >
-                  Got it
-                </button>
+
+            {/* Scrollable Body */}
+            <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 scrollbar-thin">
+              {/* Device badge */}
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/60">
+                <Smartphone className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {isIOS ? 'iOS Safari detected' : isAndroid ? 'Android Chrome detected' : isEdge ? 'Desktop Edge detected' : 'Desktop Chrome detected'}
+                </span>
               </div>
+
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Follow these steps to install Zubkas as an app on your device:
+              </p>
+
+              {/* iOS Safari instructions */}
+              {isIOS && (
+                <ol className="mt-4 space-y-3">
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">1</span>
+                    <div>
+                      <span className="text-sm text-slate-600 dark:text-slate-300">Tap the </span>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        Share <ArrowRight className="h-3 w-3" /> icon
+                      </span>
+                      <span className="text-sm text-slate-600 dark:text-slate-300"> at the bottom of Safari.</span>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">2</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Scroll down and tap <span className="font-semibold text-slate-700 dark:text-slate-200">"Add to Home Screen"</span>.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">3</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Tap <span className="font-semibold text-slate-700 dark:text-slate-200">"Add"</span> to confirm. The Zubkas icon will appear on your home screen.</span>
+                  </li>
+                </ol>
+              )}
+
+              {/* Android Chrome instructions */}
+              {isAndroid && (
+                <ol className="mt-4 space-y-3">
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">1</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Tap the <span className="font-semibold text-slate-700 dark:text-slate-200">menu icon (⋮)</span> in the top-right corner of Chrome.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">2</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Tap <span className="font-semibold text-slate-700 dark:text-slate-200">"Install app"</span> or <span className="font-semibold text-slate-700 dark:text-slate-200">"Add to Home screen"</span>.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">3</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Confirm the prompt to install. Zubkas will open as a full-screen app.</span>
+                  </li>
+                </ol>
+              )}
+
+              {/* Desktop Chrome/Edge instructions */}
+              {isDesktop && (
+                <ol className="mt-4 space-y-3">
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">1</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">
+                      Look for the <span className="font-semibold text-slate-700 dark:text-slate-200">install icon</span> (a monitor with a down arrow) in the address bar, or click the <span className="font-semibold text-slate-700 dark:text-slate-200">menu icon (⋮)</span> in the top-right corner.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">2</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Click <span className="font-semibold text-slate-700 dark:text-slate-200">"Install Zubkas Workspace"</span> from the menu.</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">3</span>
+                    <span className="text-sm text-slate-600 dark:text-slate-300">Confirm the dialog. Zubkas will open in its own window and appear in your taskbar/dock.</span>
+                  </li>
+                </ol>
+              )}
+
+              {/* Info note */}
+              <div className="mt-5 flex items-start gap-2 rounded-xl bg-brand-50 p-3 dark:bg-brand-900/20">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
+                <p className="text-xs text-brand-700 dark:text-brand-300">
+                  {isIOS
+                    ? 'iOS Safari does not support automatic install prompts. Use the Share button method above.'
+                    : isAndroid
+                      ? 'If you don\'t see the "Install" option, try visiting the site a few times — Chrome requires engagement before showing the prompt.'
+                      : 'The install icon appears in the address bar once the browser detects this is an installable app.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex shrink-0 justify-end border-t border-slate-100 px-4 py-3 sm:px-6 dark:border-slate-800">
+              <button
+                onClick={() => setShowInstallGuide(false)}
+                className="min-h-[44px] rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+              >
+                Got it
+              </button>
             </div>
           </div>
         </div>

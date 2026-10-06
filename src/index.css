@@ -36,6 +36,14 @@
   .dark .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-slate-600;
   }
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
 }
 
 @media print {

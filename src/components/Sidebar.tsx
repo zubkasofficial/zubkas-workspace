@@ -1,8 +1,8 @@
-import { LayoutDashboard, Users, FileText, Receipt, CreditCard, Calculator, FolderKanban, Repeat, ChartBar as BarChart3, Settings, Moon, Sun, Menu, X, LogOut, ChevronDown, ChevronRight, SquareCheck as CheckSquare, UserCog, User } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Receipt, CreditCard, Calculator, FolderKanban, Repeat, ChartBar as BarChart3, Settings, Moon, Sun, X, LogOut, ChevronDown, ChevronRight, SquareCheck as CheckSquare, UserCog, User } from 'lucide-react';
 import { useState } from 'react';
 import { hasPermission } from '@/utils/permissions';
 import { useAuth } from '@/context/AuthContext';
-import whiteLogo from '@/assets/icon_white.png';
+import { ZubkasIcon } from '@/components/ZubkasIcon';
 
 export type PageKey =
   | 'dashboard'
@@ -54,33 +54,19 @@ interface SidebarProps {
   darkMode: boolean;
   onToggleDark: () => void;
   onLogout: () => void;
+  mobileOpen: boolean;
+  onCloseMobile: () => void;
 }
 
-export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLogout }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLogout, mobileOpen, onCloseMobile }: SidebarProps) {
   const { user } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const projectsActive = currentPage === 'projects' || currentPage === 'tasks';
   const [projectsExpanded, setProjectsExpanded] = useState(projectsActive);
 
-  const handleNavigate = (page: PageKey) => {
-    onNavigate(page);
-    setMobileOpen(false);
-  };
-
   return (
     <>
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-3 z-40 flex items-center gap-2 rounded-lg bg-slate-900 py-2 pl-2 pr-3 text-white shadow-lg lg:hidden dark:bg-slate-800"
-        aria-label="Open sidebar"
-      >
-        <Menu className="h-5 w-5" />
-        <img src={whiteLogo} alt="Zubkas" className="h-8 w-auto object-contain rounded" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-        <span className="text-xs font-bold">Zubkas</span>
-      </button>
-
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onCloseMobile} />
       )}
 
       <aside
@@ -90,12 +76,12 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
       >
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <img src={whiteLogo} alt="Zubkas Workspace" className="h-8 w-auto object-contain rounded-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <ZubkasIcon className="h-8 w-8 shrink-0" variant="white" />
             <div>
               <h1 className="text-sm font-bold text-white">Zubkas Workspace</h1>
             </div>
           </div>
-          <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white lg:hidden" aria-label="Close sidebar">
+          <button onClick={onCloseMobile} className="text-slate-400 hover:text-white lg:hidden" aria-label="Close sidebar">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -135,7 +121,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
                           return (
                             <li key={child.key}>
                               <button
-                                onClick={() => handleNavigate(child.key)}
+                                onClick={() => onNavigate(child.key)}
                                 className={`flex w-full items-center gap-2.5 rounded-lg py-2 pl-9 pr-3 text-sm transition-all ${
                                   childActive
                                     ? 'bg-white/10 font-medium text-white'
@@ -157,7 +143,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
               return (
                 <li key={item.key}>
                   <button
-                    onClick={() => handleNavigate(item.key)}
+                    onClick={() => onNavigate(item.key)}
                     className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                       active
                         ? 'bg-brand-600 text-white shadow-md shadow-brand-600/20'
@@ -175,7 +161,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
 
         <div className="space-y-2 border-t border-slate-800 p-4">
           <button
-            onClick={() => handleNavigate('profile')}
+            onClick={() => onNavigate('profile')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
               currentPage === 'profile'
                 ? 'bg-[#9f0f0f] text-white shadow-md'
