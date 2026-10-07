@@ -1,5 +1,4 @@
 import type { PageKey } from '@/components/Sidebar';
-import { ZubkasIcon } from '@/components/ZubkasIcon';
 import { Moon, Sun, User } from 'lucide-react';
 
 const pageTitles: Record<PageKey, { title: string; subtitle: string }> = {
@@ -44,7 +43,7 @@ export function Header({ currentPage, darkMode, onToggleDark, onOpenSidebar, onN
         </button>
 
         <div className="flex items-center gap-2">
-          <ZubkasIcon className="h-7 w-7" variant="color" />
+          <img src="/zubkas-logo.png" alt="Zubkas" className="h-7 w-auto shrink-0 object-contain" />
           <span className="text-sm font-bold text-slate-900 dark:text-white">Zubkas</span>
         </div>
 

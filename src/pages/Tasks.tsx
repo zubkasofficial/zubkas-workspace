@@ -1,13 +1,13 @@
-import { CalendarClock, SquareCheck as CheckSquare, Clock, Plus, Search, Trash2, TriangleAlert as AlertTriangle, Pencil, CircleUser as UserCircle2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { CalendarClock, SquareCheck as CheckSquare, Clock, Plus, Search, Trash2, TriangleAlert as AlertTriangle, Pencil, CircleUser as UserCircle2, ChevronDown, Check } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/AuthContext';
-import { useProjectTasks, isOverdue, isDueToday, type ProjectTask } from '@/hooks/useProjectTasks';
+import { useProjectTasks, isOverdue, isDueToday, type ProjectTask, type TaskStatus } from '@/hooks/useProjectTasks';
 import { TaskModal } from '@/components/TaskModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/context/ToastContext';
 
-type StatusFilter = 'all' | 'pending' | 'completed' | 'overdue';
+type StatusFilter = 'all' | 'pending' | 'in_progress' | 'completed' | 'overdue';
 type AssigneeFilter = 'all' | 'mine';
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -23,7 +23,7 @@ function formatDate(dateStr: string): string {
 
 export function Tasks() {
   const { db } = useWorkspace();
-  const { tasks, toggleTask, deleteTask } = useProjectTasks();
+  const { tasks, toggleTask, setTaskStatus, deleteTask } = useProjectTasks();
   const { showToast } = useToast();
   const { user } = useAuth();
   const isEmployee = user?.role === 'employee';
@@ -47,11 +47,11 @@ export function Tasks() {
 
   const metrics = useMemo(() => {
     const total = scopedTasks.length;
-    const completed = scopedTasks.filter((t) => t.completed).length;
+    const completed = scopedTasks.filter((t) => t.completed || t.status === 'completed').length;
     const overdue = scopedTasks.filter(isOverdue).length;
-    const today = scopedTasks.filter(isDueToday).length;
-    const pending = total - completed;
-    return { total, completed, overdue, today, pending };
+    const inProgress = scopedTasks.filter((t) => t.status === 'in_progress').length;
+    const pending = total - completed - inProgress;
+    return { total, completed, overdue, inProgress, pending };
   }, [scopedTasks]);
 
   const visibleProjectIds = useMemo(() => {
@@ -72,8 +72,10 @@ export function Tasks() {
         const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
         const matchesProject = projectFilter === 'all' || task.project_id === projectFilter;
         const matchesVisibility = !visibleProjectIds || visibleProjectIds.has(task.project_id);
+        const taskStatus: TaskStatus = task.status ?? (task.completed ? 'completed' : 'pending');
         let matchesStatus = true;
-        if (statusFilter === 'pending') matchesStatus = !task.completed;
+        if (statusFilter === 'pending') matchesStatus = !task.completed && taskStatus !== 'in_progress';
+        else if (statusFilter === 'in_progress') matchesStatus = taskStatus === 'in_progress';
         else if (statusFilter === 'completed') matchesStatus = task.completed;
         else if (statusFilter === 'overdue') matchesStatus = isOverdue(task);
         return matchesSearch && matchesProject && matchesStatus && matchesVisibility;
@@ -87,6 +89,17 @@ export function Tasks() {
   const openCreate = () => { setEditingTask(null); setModalOpen(true); };
   const openEdit = (task: ProjectTask) => { setEditingTask(task); setModalOpen(true); };
 
+  const handleToggle = (task: ProjectTask) => {
+    toggleTask(task.id);
+    showToast(task.completed ? 'Task marked as Pending' : 'Task marked as Completed');
+  };
+
+  const handleStatusChange = (task: ProjectTask, newStatus: TaskStatus) => {
+    setTaskStatus(task.id, newStatus);
+    const labels: Record<TaskStatus, string> = { pending: 'Pending', in_progress: 'In Progress', completed: 'Completed' };
+    showToast(`Task status updated to ${labels[newStatus]}`);
+  };
+
   const confirmDelete = () => {
     if (!deleteTarget) return;
     deleteTask(deleteTarget.id);
@@ -96,11 +109,7 @@ export function Tasks() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Project Tasks</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Assign, track deadlines, and organize deliverables across all client projects</p>
-        </div>
+      <div className="flex justify-end">
         <button onClick={openCreate} className="flex items-center justify-center gap-2 rounded-xl bg-[#9f0f0f] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#850c0c]">
           <Plus className="h-4 w-4" /> Create Task
         </button>
@@ -131,9 +140,10 @@ export function Tasks() {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Total Tasks" value={metrics.total} icon={CheckSquare} color="brand" />
-        <MetricCard title="Pending / Today" value={`${metrics.pending} / ${metrics.today}`} icon={Clock} color="amber" />
+        <MetricCard title="Pending" value={metrics.pending} icon={Clock} color="amber" />
+        <MetricCard title="In Progress" value={metrics.inProgress} icon={Clock} color="blue" />
         <MetricCard title="Overdue" value={metrics.overdue} icon={AlertTriangle} color="rose" />
         <MetricCard title="Completed" value={metrics.completed} icon={CheckSquare} color="emerald" />
       </div>
@@ -157,6 +167,7 @@ export function Tasks() {
               className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
+              <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="overdue">Overdue</option>
             </select>
@@ -184,7 +195,7 @@ export function Tasks() {
                     <tr key={task.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <button onClick={() => toggleTask(task.id)}
+                          <button onClick={() => handleToggle(task)}
                             className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all ${task.completed ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 hover:border-brand-500 dark:border-slate-600'}`}
                             aria-label={task.completed ? 'Mark incomplete' : 'Mark complete'}>
                             {task.completed && (
@@ -194,7 +205,7 @@ export function Tasks() {
                             )}
                           </button>
                           <div className="min-w-0">
-                            <p className={`text-sm font-medium ${task.completed ? 'text-slate-400 line-through dark:text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>{task.title}</p>
+                            <p className={`text-sm font-medium transition-all ${task.completed ? 'text-slate-400 line-through dark:text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>{task.title}</p>
                             {task.description && <p className="mt-0.5 truncate text-xs text-slate-400">{task.description}</p>}
                           </div>
                         </div>
@@ -226,13 +237,11 @@ export function Tasks() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        {task.completed ? (
-                          <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Completed</span>
-                        ) : overdue ? (
-                          <span className="inline-flex rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">Overdue</span>
-                        ) : (
-                          <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pending</span>
-                        )}
+                        <StatusDropdown
+                          task={task}
+                          overdue={overdue}
+                          onStatusChange={(status) => handleStatusChange(task, status)}
+                        />
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
@@ -280,11 +289,68 @@ export function Tasks() {
   );
 }
 
-function MetricCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: typeof CheckSquare; color: 'brand' | 'amber' | 'rose' | 'emerald' }) {
+function StatusDropdown({ task, overdue, onStatusChange }: { task: ProjectTask; overdue: boolean; onStatusChange: (status: TaskStatus) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const currentStatus: TaskStatus = task.status ?? (task.completed ? 'completed' : 'pending');
+  const displayLabel = task.completed ? 'Completed' : overdue && currentStatus === 'pending' ? 'Overdue' : currentStatus === 'in_progress' ? 'In Progress' : 'Pending';
+  const displayClass = task.completed
+    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+    : overdue && currentStatus === 'pending'
+      ? 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+      : currentStatus === 'in_progress'
+        ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+        : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+
+  const options: { value: TaskStatus; label: string; color: string }[] = [
+    { value: 'pending', label: 'Pending', color: 'text-amber-600 dark:text-amber-400' },
+    { value: 'in_progress', label: 'In Progress', color: 'text-blue-600 dark:text-blue-400' },
+    { value: 'completed', label: 'Completed', color: 'text-emerald-600 dark:text-emerald-400' },
+  ];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((prev) => !prev)}
+        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-all hover:opacity-80 ${displayClass}`}
+      >
+        {displayLabel}
+        <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { onStatusChange(opt.value); setOpen(false); }}
+              className={`flex w-full items-center justify-between px-3 py-2 text-xs font-medium transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 ${currentStatus === opt.value ? opt.color : 'text-slate-600 dark:text-slate-300'}`}
+            >
+              {opt.label}
+              {currentStatus === opt.value && <Check className="h-3.5 w-3.5" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MetricCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: typeof CheckSquare; color: 'brand' | 'amber' | 'rose' | 'emerald' | 'blue' }) {
   const styles = {
     brand: 'bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400',
     amber: 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
     rose: 'bg-rose-50 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
     emerald: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
   };
   return (

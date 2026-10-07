@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed';
 
 export interface ProjectTask {
   id: string;
@@ -16,6 +17,7 @@ export interface ProjectTask {
   description?: string;
   assignedToId?: string;
   assignedToName?: string;
+  status?: TaskStatus;
 }
 
 export const TASKS_UPDATED_EVENT = 'zubkas_project_tasks_updated';
@@ -25,6 +27,7 @@ function rowToTask(r: Record<string, unknown>): ProjectTask {
     id: r.id, project_id: r.project_id, project_name: r.project_name, client_name: r.client_name,
     title: r.title, due_date: r.due_date, completed: r.completed, created_at: r.created_at,
     priority: r.priority, description: r.description, assignedToId: r.assigned_to_id, assignedToName: r.assigned_to_name,
+    status: (r.status as TaskStatus) ?? (r.completed ? 'completed' : 'pending'),
   };
 }
 function taskToRow(t: ProjectTask) {
@@ -32,6 +35,7 @@ function taskToRow(t: ProjectTask) {
     id: t.id, project_id: t.project_id, project_name: t.project_name, client_name: t.client_name,
     title: t.title, due_date: t.due_date, completed: t.completed, created_at: t.created_at,
     priority: t.priority, description: t.description, assigned_to_id: t.assignedToId, assigned_to_name: t.assignedToName,
+    status: t.status ?? (t.completed ? 'completed' : 'pending'),
   };
 }
 
@@ -83,8 +87,8 @@ export function useProjectTasks() {
       const next = [...prev, task];
       supabase.from('project_tasks').upsert(taskToRow(task)).then(({ error }) => {
         if (error) console.error('upsert task:', error.message);
+        else window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
       });
-      window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
       return next;
     });
     return task;
@@ -94,18 +98,32 @@ export function useProjectTasks() {
     setTasks((prev) => {
       const next = prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t));
       const updated = next.find((t) => t.id === taskId);
-      if (updated) supabase.from('project_tasks').upsert(taskToRow(updated)).then(({ error }) => { if (error) console.error('upsert task:', error.message); });
-      window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
+      if (updated) supabase.from('project_tasks').upsert(taskToRow(updated)).then(({ error }) => { if (error) console.error('upsert task:', error.message); else window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT)); });
       return next;
     });
   }, []);
 
   const toggleTask = useCallback((taskId: string) => {
     setTasks((prev) => {
-      const next = prev.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t));
+      const next = prev.map((t) => {
+        if (t.id !== taskId) return t;
+        const completed = !t.completed;
+        return { ...t, completed, status: (completed ? 'completed' : 'pending') as TaskStatus };
+      });
       const updated = next.find((t) => t.id === taskId);
-      if (updated) supabase.from('project_tasks').upsert(taskToRow(updated)).then(({ error }) => { if (error) console.error('upsert task:', error.message); });
-      window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
+      if (updated) supabase.from('project_tasks').upsert(taskToRow(updated)).then(({ error }) => { if (error) console.error('upsert task:', error.message); else window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT)); });
+      return next;
+    });
+  }, []);
+
+  const setTaskStatus = useCallback((taskId: string, status: TaskStatus) => {
+    setTasks((prev) => {
+      const next = prev.map((t) => {
+        if (t.id !== taskId) return t;
+        return { ...t, completed: status === 'completed', status };
+      });
+      const updated = next.find((t) => t.id === taskId);
+      if (updated) supabase.from('project_tasks').upsert(taskToRow(updated)).then(({ error }) => { if (error) console.error('upsert task:', error.message); else window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT)); });
       return next;
     });
   }, []);
@@ -113,8 +131,7 @@ export function useProjectTasks() {
   const deleteTask = useCallback((taskId: string) => {
     setTasks((prev) => {
       const next = prev.filter((t) => t.id !== taskId);
-      supabase.from('project_tasks').delete().eq('id', taskId).then(({ error }) => { if (error) console.error('delete task:', error.message); });
-      window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
+      supabase.from('project_tasks').delete().eq('id', taskId).then(({ error }) => { if (error) console.error('delete task:', error.message); else window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT)); });
       return next;
     });
   }, []);
@@ -122,17 +139,20 @@ export function useProjectTasks() {
   const deleteProjectTasks = useCallback((projectId: string) => {
     setTasks((prev) => {
       const next = prev.filter((t) => t.project_id !== projectId);
-      supabase.from('project_tasks').delete().eq('project_id', projectId).then(({ error }) => { if (error) console.error('delete project tasks:', error.message); });
-      window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT));
+      supabase.from('project_tasks').delete().eq('project_id', projectId).then(({ error }) => { if (error) console.error('delete project tasks:', error.message); else window.dispatchEvent(new CustomEvent(TASKS_UPDATED_EVENT)); });
       return next;
     });
   }, []);
 
-  return { tasks, getProjectTasks, addTask, updateTask, toggleTask, deleteTask, deleteProjectTasks, loaded };
+  return { tasks, getProjectTasks, addTask, updateTask, toggleTask, setTaskStatus, deleteTask, deleteProjectTasks, loaded };
+}
+
+function isCompleted(task: ProjectTask): boolean {
+  return task.completed || task.status === 'completed';
 }
 
 export function isOverdue(task: ProjectTask): boolean {
-  if (task.completed) return false;
+  if (isCompleted(task)) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(task.due_date + 'T00:00:00');
@@ -140,7 +160,7 @@ export function isOverdue(task: ProjectTask): boolean {
 }
 
 export function isDueToday(task: ProjectTask): boolean {
-  if (task.completed) return false;
+  if (isCompleted(task)) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(task.due_date + 'T00:00:00');
@@ -148,7 +168,7 @@ export function isDueToday(task: ProjectTask): boolean {
 }
 
 export function isUpcoming(task: ProjectTask): boolean {
-  if (task.completed) return false;
+  if (isCompleted(task)) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const due = new Date(task.due_date + 'T00:00:00');

@@ -5,7 +5,7 @@ import { StatCard } from '@/components/StatCard';
 import { RevenueChart } from '@/components/RevenueChart';
 import { StatusBadge } from '@/components/StatusBadge';
 import { parseTransactionDate } from '@/utils/calculations';
-import { useProjectTasks, isOverdue, isDueToday, isUpcoming, type ProjectTask } from '@/hooks/useProjectTasks';
+import { useProjectTasks, isOverdue, isDueToday, isUpcoming, type ProjectTask, type TaskStatus } from '@/hooks/useProjectTasks';
 import type { PageKey } from '@/components/Sidebar';
 
 const formatCurrency = (amount: number) => `₹${Math.round(amount).toLocaleString('en-IN')}`;
@@ -29,7 +29,7 @@ const TAB_LABELS: Record<TaskTab, string> = {
 
 export function Dashboard({ onNavigate }: DashboardProps) {
   const { db } = useWorkspace();
-  const { tasks, toggleTask } = useProjectTasks();
+  const { tasks } = useProjectTasks();
   const [taskTab, setTaskTab] = useState<TaskTab>('overdue');
 
   const metrics = useMemo(() => {
@@ -190,7 +190,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             {activeTabTasks.length > 0 ? (
               <div className="space-y-2">
                 {activeTabTasks.map((task) => (
-                  <DashboardTaskRow key={task.id} task={task} onToggle={toggleTask} overdue={taskTab === 'overdue'} />
+                  <DashboardTaskRow key={task.id} task={task} overdue={taskTab === 'overdue'} />
                 ))}
               </div>
             ) : (
@@ -213,22 +213,37 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   );
 }
 
-function DashboardTaskRow({ task, onToggle, overdue }: { task: ProjectTask; onToggle: (id: string) => void; overdue: boolean }) {
+function DashboardTaskRow({ task, overdue }: { task: ProjectTask; overdue: boolean }) {
+  const status: TaskStatus = task.status ?? (task.completed ? 'completed' : 'pending');
+  const statusLabel = status === 'completed' ? 'Completed' : status === 'in_progress' ? 'In Progress' : overdue ? 'Overdue' : 'Pending';
+  const statusClass = status === 'completed'
+    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+    : status === 'in_progress'
+      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+      : overdue
+        ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+
+  const priorityClass = task.priority === 'high'
+    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+    : task.priority === 'medium'
+      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-2.5 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50">
-      <button
-        onClick={() => onToggle(task.id)}
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 border-slate-300 transition-all hover:border-brand-500 dark:border-slate-600"
-        aria-label="Mark complete"
-      >
-        <span className="h-2 w-2 rounded-sm bg-transparent transition-all" />
-      </button>
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-2.5 transition-colors dark:border-slate-700">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">{task.title}</p>
+        <p className={`truncate text-sm font-medium ${status === 'completed' ? 'text-slate-400 line-through dark:text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>{task.title}</p>
         <span className="mt-0.5 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-700 dark:text-slate-400">
           {task.project_name} · {task.client_name}
         </span>
       </div>
+      <span className={`hidden shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize sm:inline ${priorityClass}`}>
+        {task.priority ?? 'medium'}
+      </span>
+      <span className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
+        {statusLabel}
+      </span>
       <span className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${overdue ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
         <CalendarClock className="h-3 w-3" />
         {new Date(task.due_date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
