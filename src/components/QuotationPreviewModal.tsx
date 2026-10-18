@@ -19,7 +19,9 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
   if (!quotation) return null;
 
   const client = db.clients.find((c) => c.id === quotation.clientId);
-  const subtotal = getSubtotal(quotation.items);
+  const isPackage = quotation.pricingMode === 'package';
+  const packageTotal = Number(quotation.packageAmount ?? 0);
+  const subtotal = isPackage ? packageTotal : getSubtotal(quotation.items);
   const taxEnabled = quotation.taxEnabled !== false && quotation.taxType !== 'none';
   const taxRate = taxEnabled ? (quotation.taxRate ?? settings.tax.rate ?? 18) : 0;
   const taxAmount = taxEnabled ? (subtotal * taxRate) / 100 : 0;
@@ -82,28 +84,50 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
 
         {/* Line Items */}
         <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
-              <tr>
-                <th className="px-3 py-2">#</th>
-                <th className="px-3 py-2">Description</th>
-                <th className="px-3 py-2 text-center">Qty</th>
-                <th className="px-3 py-2 text-right">Rate</th>
-                <th className="px-3 py-2 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {quotation.items.map((item, index) => (
-                <tr key={item.id}>
-                  <td className="px-3 py-3 text-slate-400">{index + 1}</td>
-                  <td className="px-3 py-3 text-slate-700 dark:text-slate-300">{item.description}</td>
-                  <td className="px-3 py-3 text-center text-slate-500">{item.quantity}</td>
-                  <td className="px-3 py-3 text-right text-slate-500">{formatCurrencyDetailed(item.rate)}</td>
-                  <td className="px-3 py-3 text-right font-medium text-slate-800 dark:text-slate-200">{formatCurrencyDetailed(item.quantity * item.rate)}</td>
+          {isPackage ? (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
+                <tr>
+                  <th className="px-3 py-2">#</th>
+                  <th className="px-3 py-2">Scope of Work / Deliverables</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {quotation.items.map((item, index) => (
+                  <tr key={item.id}>
+                    <td className="px-3 py-3 text-slate-400">{index + 1}</td>
+                    <td className="px-3 py-3 text-slate-700 dark:text-slate-300">{item.description}</td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-50 dark:bg-slate-800">
+                  <td className="px-3 py-3 text-right font-semibold text-slate-600 dark:text-slate-300" colSpan={2}>Total Package Amount: {formatCurrency(packageTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
+                <tr>
+                  <th className="px-3 py-2">#</th>
+                  <th className="px-3 py-2">Description</th>
+                  <th className="px-3 py-2 text-center">Qty</th>
+                  <th className="px-3 py-2 text-right">Rate</th>
+                  <th className="px-3 py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {quotation.items.map((item, index) => (
+                  <tr key={item.id}>
+                    <td className="px-3 py-3 text-slate-400">{index + 1}</td>
+                    <td className="px-3 py-3 text-slate-700 dark:text-slate-300">{item.description}</td>
+                    <td className="px-3 py-3 text-center text-slate-500">{item.quantity}</td>
+                    <td className="px-3 py-3 text-right text-slate-500">{formatCurrencyDetailed(item.rate)}</td>
+                    <td className="px-3 py-3 text-right font-medium text-slate-800 dark:text-slate-200">{formatCurrencyDetailed(item.quantity * item.rate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Summary */}
@@ -115,9 +139,9 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
           </div>
         </div>
 
-        {/* Notes */}
+        {/* Notes — placed directly above Terms & Conditions */}
         {quotation.notes && (
-          <div className="rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-800">
+          <div className="rounded-lg bg-amber-50 p-4 text-sm dark:bg-amber-900/20">
             <p className="font-semibold text-slate-700 dark:text-slate-200">Notes</p>
             <p className="mt-1 text-slate-600 dark:text-slate-300">{quotation.notes}</p>
           </div>

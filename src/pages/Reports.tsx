@@ -77,7 +77,7 @@ export function Reports() {
     const tax = db.invoices
       .filter((invoice) => (invoice.status === 'Paid' || invoice.status === 'Partial') && isInDateRange(invoice.date, range.start, range.end))
       .reduce((s, invoice) => {
-        const total = getInvoiceTotal(invoice.items);
+        const total = getInvoiceTotal(invoice);
         const taxablePortion = total > 0 ? (invoice.paidAmount / total) : 0;
         return s + getGstAmount(invoice.items) * taxablePortion;
       }, 0);
@@ -115,7 +115,7 @@ export function Reports() {
       return {
         status,
         count: invoices.length,
-        amount: invoices.reduce((s, inv) => s + getInvoiceTotal(inv.items), 0),
+        amount: invoices.reduce((s, inv) => s + getInvoiceTotal(inv), 0),
       };
     });
   }, [db.invoices, range]);

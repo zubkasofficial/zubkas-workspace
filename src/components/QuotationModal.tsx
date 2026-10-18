@@ -15,6 +15,7 @@ interface QuotationModalProps {
 
 type QuotationType = 'service' | 'subscription';
 type DiscountUnit = 'flat' | 'percent';
+type PricingMode = 'itemized' | 'package';
 
 const sectionCard = 'rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/50';
 const smallInput = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
@@ -50,6 +51,8 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
   const [terms, setTerms] = useState<string[]>([]);
   const [newTerm, setNewTerm] = useState('');
   const [showPreview, setShowPreview] = useState(true);
+  const [pricingMode, setPricingMode] = useState<PricingMode>('itemized');
+  const [packageAmount, setPackageAmount] = useState('0');
 
   useEffect(() => {
     if (open) {
@@ -73,6 +76,8 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
       setTerms([...settings.terms]);
       setNewTerm('');
       setShowPreview(true);
+      setPricingMode('itemized');
+      setPackageAmount('0');
     }
   }, [open, db.clients, db.quotations.length, taxSettings.enabled, paymentAccounts, settings.terms, subCategories]);
 
@@ -93,23 +98,33 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
   const selectedClient = db.clients.find((c) => c.id === clientId);
   const selectedAccount = paymentAccounts.find((a) => a.id === paymentAccountId);
 
+  const packageTotal = Number(packageAmount) || 0;
+
   const financials = useMemo(() => {
-    const subtotal = getSubtotal(items);
+    const subtotal = pricingMode === 'package' ? packageTotal : getSubtotal(items);
     const dVal = Number(discountValue) || 0;
     const discountAmount = discountUnit === 'flat' ? Math.min(dVal, subtotal) : subtotal * dVal / 100;
     const taxableAmount = Math.max(subtotal - discountAmount, 0);
     const taxAmount = applyTax ? taxableAmount * (taxSettings.rate / 100) : 0;
     const grandTotal = taxableAmount + taxAmount;
     return { subtotal, discountAmount, taxableAmount, taxAmount, grandTotal };
-  }, [items, discountValue, discountUnit, applyTax, taxSettings.rate]);
+  }, [pricingMode, packageTotal, items, discountValue, discountUnit, applyTax, taxSettings.rate]);
 
   const submit = () => {
     if (!clientId) {
       showToast('Please select a client first', 'error');
       return;
     }
-    if (items.some((item) => !item.description || item.rate <= 0)) {
-      showToast('Complete every line item with description and rate', 'error');
+    if (items.some((item) => !item.description)) {
+      showToast('Complete every line item with a description', 'error');
+      return;
+    }
+    if (pricingMode === 'itemized' && items.some((item) => item.rate <= 0)) {
+      showToast('Each itemized line item needs a rate greater than zero', 'error');
+      return;
+    }
+    if (pricingMode === 'package' && packageTotal <= 0) {
+      showToast('Enter a Package Total Amount greater than zero', 'error');
       return;
     }
     if (quotType === 'subscription' && (!subCategory || !subStartDate || !subEndDate)) {
@@ -139,6 +154,8 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
       showBankDetails,
       showUpiDetails,
       terms,
+      pricingMode,
+      packageAmount: pricingMode === 'package' ? packageTotal : 0,
     };
     addQuotation(quotation);
     if (quotType === 'subscription') {
@@ -321,41 +338,92 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
                 </div>
               )}
 
+              {/* Pricing Mode */}
+              <div className={sectionCard}>
+                <label className={labelClass}>Pricing Mode</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode('itemized')}
+                    className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition ${pricingMode === 'itemized' ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+                  >
+                    Itemized Pricing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPricingMode('package')}
+                    className={`rounded-lg border px-3 py-2.5 text-sm font-semibold transition ${pricingMode === 'package' ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+                  >
+                    Package / Lump-Sum
+                  </button>
+                </div>
+                {pricingMode === 'package' && (
+                  <div className="mt-3">
+                    <label className={labelClass}>Total Package Amount</label>
+                    <input type="number" min="0" value={packageAmount} onChange={(e) => setPackageAmount(e.target.value)} placeholder="Enter lump-sum total" className={inputClass} />
+                    <p className="mt-1.5 text-xs text-slate-400">This amount is used as the subtotal for tax &amp; grand total calculations.</p>
+                  </div>
+                )}
+              </div>
+
               {/* Line Items */}
               <div className={sectionCard}>
                 <div className="mb-3 flex items-center justify-between">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Line Items</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{pricingMode === 'package' ? 'Scope of Work / Deliverables' : 'Line Items'}</label>
                   <button type="button" onClick={() => setItems((prev) => [...prev, newQuoteItem()])} className="flex items-center gap-1 text-sm font-semibold text-brand-600 hover:text-brand-700">
                     <Plus className="h-4 w-4" /> Add Item
                   </button>
                 </div>
-                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                  <table className="w-full min-w-[420px] text-left text-sm">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
-                      <tr>
-                        <th className="px-3 py-2 font-semibold">Description</th>
-                        <th className="px-2 py-2 text-center font-semibold">Qty</th>
-                        <th className="px-2 py-2 text-center font-semibold">Rate</th>
-                        <th className="px-3 py-2 text-right font-semibold">Amount</th>
-                        <th className="px-2 py-2" />
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {items.map((item, index) => {
-                        const amount = item.quantity * item.rate;
-                        return (
+                {pricingMode === 'package' ? (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table className="w-full min-w-[300px] text-left text-sm">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold">#</th>
+                          <th className="px-3 py-2 font-semibold">Description</th>
+                          <th className="px-2 py-2" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {items.map((item, index) => (
                           <tr key={item.id}>
-                            <td className="px-3 py-2"><input required placeholder="Item description" value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className={`${smallInput} border-0 bg-transparent px-1`} /></td>
-                            <td className="px-2 py-2"><input required type="number" min="1" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} className={`${smallInput} w-16 border-0 bg-transparent px-1 text-center`} /></td>
-                            <td className="px-2 py-2"><input required type="number" min="0" placeholder="0" value={item.rate || ''} onChange={(e) => updateItem(item.id, 'rate', e.target.value)} className={`${smallInput} w-20 border-0 bg-transparent px-1 text-center`} /></td>
-                            <td className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-300">{formatCurrency(amount)}</td>
+                            <td className="px-3 py-2 text-slate-400">{index + 1}</td>
+                            <td className="px-3 py-2"><input required placeholder="Deliverable / scope item" value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className={`${smallInput} border-0 bg-transparent px-1`} /></td>
                             <td className="px-2 py-2"><button type="button" disabled={items.length === 1} onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))} className="flex items-center justify-center text-slate-400 hover:text-rose-600 disabled:opacity-30" aria-label="Remove item"><Trash2 className="h-4 w-4" /></button></td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table className="w-full min-w-[420px] text-left text-sm">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold">Description</th>
+                          <th className="px-2 py-2 text-center font-semibold">Qty</th>
+                          <th className="px-2 py-2 text-center font-semibold">Rate</th>
+                          <th className="px-3 py-2 text-right font-semibold">Amount</th>
+                          <th className="px-2 py-2" />
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {items.map((item, index) => {
+                          const amount = item.quantity * item.rate;
+                          return (
+                            <tr key={item.id}>
+                              <td className="px-3 py-2"><input required placeholder="Item description" value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className={`${smallInput} border-0 bg-transparent px-1`} /></td>
+                              <td className="px-2 py-2"><input required type="number" min="1" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} className={`${smallInput} w-16 border-0 bg-transparent px-1 text-center`} /></td>
+                              <td className="px-2 py-2"><input required type="number" min="0" placeholder="0" value={item.rate || ''} onChange={(e) => updateItem(item.id, 'rate', e.target.value)} className={`${smallInput} w-20 border-0 bg-transparent px-1 text-center`} /></td>
+                              <td className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-300">{formatCurrency(amount)}</td>
+                              <td className="px-2 py-2"><button type="button" disabled={items.length === 1} onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))} className="flex items-center justify-center text-slate-400 hover:text-rose-600 disabled:opacity-30" aria-label="Remove item"><Trash2 className="h-4 w-4" /></button></td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
 
               {/* Payment Account Selection */}
@@ -514,28 +582,50 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
 
                 {/* Line Items Table */}
                 <div className="mt-4 overflow-hidden rounded-md border border-slate-200 dark:border-slate-700">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
-                      <tr>
-                        <th className="px-2 py-2">#</th>
-                        <th className="px-2 py-2">Description</th>
-                        <th className="px-2 py-2 text-center">Qty</th>
-                        <th className="px-2 py-2 text-right">Unit Price</th>
-                        <th className="px-2 py-2 text-right">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                      {items.map((item, index) => (
-                        <tr key={item.id}>
-                          <td className="px-2 py-2 text-slate-400">{index + 1}</td>
-                          <td className="px-2 py-2 text-slate-700 dark:text-slate-300">{item.description || '—'}</td>
-                          <td className="px-2 py-2 text-center text-slate-500">{item.quantity}</td>
-                          <td className="px-2 py-2 text-right text-slate-500">{formatCurrencyDetailed(item.rate)}</td>
-                          <td className="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200">{formatCurrencyDetailed(item.quantity * item.rate)}</td>
+                  {pricingMode === 'package' ? (
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
+                        <tr>
+                          <th className="px-2 py-2">#</th>
+                          <th className="px-2 py-2">Scope of Work / Deliverables</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {items.map((item, index) => (
+                          <tr key={item.id}>
+                            <td className="px-2 py-2 text-slate-400">{index + 1}</td>
+                            <td className="px-2 py-2 text-slate-700 dark:text-slate-300">{item.description || '—'}</td>
+                          </tr>
+                        ))}
+                        <tr className="bg-slate-50 dark:bg-slate-800">
+                          <td className="px-2 py-2 text-right font-semibold text-slate-600 dark:text-slate-300" colSpan={2}>Total Package Amount: {formatCurrency(packageTotal)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  ) : (
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-800">
+                        <tr>
+                          <th className="px-2 py-2">#</th>
+                          <th className="px-2 py-2">Description</th>
+                          <th className="px-2 py-2 text-center">Qty</th>
+                          <th className="px-2 py-2 text-right">Unit Price</th>
+                          <th className="px-2 py-2 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {items.map((item, index) => (
+                          <tr key={item.id}>
+                            <td className="px-2 py-2 text-slate-400">{index + 1}</td>
+                            <td className="px-2 py-2 text-slate-700 dark:text-slate-300">{item.description || '—'}</td>
+                            <td className="px-2 py-2 text-center text-slate-500">{item.quantity}</td>
+                            <td className="px-2 py-2 text-right text-slate-500">{formatCurrencyDetailed(item.rate)}</td>
+                            <td className="px-2 py-2 text-right font-medium text-slate-800 dark:text-slate-200">{formatCurrencyDetailed(item.quantity * item.rate)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
 
                 {/* Summary */}
@@ -554,9 +644,9 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
                   </div>
                 </div>
 
-                {/* Notes */}
+                {/* Notes — placed directly above Terms & Conditions */}
                 {notes && (
-                  <div className="mt-4 rounded-md bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  <div className="mt-4 rounded-md bg-amber-50 p-3 text-xs text-slate-600 dark:bg-amber-900/20 dark:text-slate-300">
                     <p className="font-semibold">Notes</p>
                     <p className="mt-1">{notes}</p>
                   </div>

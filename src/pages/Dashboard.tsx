@@ -4,16 +4,11 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { StatCard } from '@/components/StatCard';
 import { RevenueChart } from '@/components/RevenueChart';
 import { StatusBadge } from '@/components/StatusBadge';
-import { parseTransactionDate } from '@/utils/calculations';
+import { getInvoiceTotal, parseTransactionDate } from '@/utils/calculations';
 import { useProjectTasks, isOverdue, isDueToday, isUpcoming, type ProjectTask, type TaskStatus } from '@/hooks/useProjectTasks';
 import type { PageKey } from '@/components/Sidebar';
 
 const formatCurrency = (amount: number) => `₹${Math.round(amount).toLocaleString('en-IN')}`;
-
-const getInvoiceTotal = (items: { quantity: number; rate: number }[]) => {
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-  return subtotal * 1.18;
-};
 
 interface DashboardProps {
   onNavigate: (page: PageKey) => void;
@@ -33,11 +28,11 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [taskTab, setTaskTab] = useState<TaskTab>('overdue');
 
   const metrics = useMemo(() => {
-    const invoiced = db.invoices.reduce((sum, invoice) => sum + getInvoiceTotal(invoice.items), 0);
+    const invoiced = db.invoices.reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
     const received = db.payments.reduce((sum, payment) => sum + payment.amount, 0);
     const outstanding = db.invoices
       .filter((invoice) => invoice.status !== 'Paid')
-      .reduce((sum, invoice) => sum + getInvoiceTotal(invoice.items), 0) -
+      .reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0) -
       db.payments.reduce((sum, payment) => sum + payment.amount, 0);
     return { invoiced, received, outstanding };
   }, [db]);
@@ -107,7 +102,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="space-y-4">
             {(['Paid', 'Partial', 'Unpaid', 'Overdue'] as const).map((status) => {
               const count = db.invoices.filter((invoice) => invoice.status === status).length;
-              const amount = db.invoices.filter((invoice) => invoice.status === status).reduce((sum, invoice) => sum + getInvoiceTotal(invoice.items), 0);
+              const amount = db.invoices.filter((invoice) => invoice.status === status).reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
               return (
                 <div key={status} className="flex items-center justify-between">
                   <div className="flex items-center gap-3"><StatusBadge status={status} /><span className="text-sm text-slate-500 dark:text-slate-400">{count} invoice{count !== 1 ? 's' : ''}</span></div>
@@ -132,7 +127,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
           <div className="overflow-x-auto">
             {db.invoices.length > 0 ? (
               <table className="w-full min-w-[400px] text-left"><thead><tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800"><th className="px-6 py-3 font-semibold">Invoice</th><th className="px-6 py-3 font-semibold">Client</th><th className="px-6 py-3 font-semibold">Amount</th><th className="px-6 py-3 font-semibold">Status</th></tr></thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{db.invoices.slice(0, 4).map((invoice) => <tr key={invoice.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"><td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{invoice.invoiceNumber}</td><td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{db.clients.find((client) => client.id === invoice.clientId)?.name ?? 'Unknown client'}</td><td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(getInvoiceTotal(invoice.items))}</td><td className="px-6 py-4"><StatusBadge status={invoice.status} /></td></tr>)}</tbody></table>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{db.invoices.slice(0, 4).map((invoice) => <tr key={invoice.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"><td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{invoice.invoiceNumber}</td><td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{db.clients.find((client) => client.id === invoice.clientId)?.name ?? 'Unknown client'}</td><td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(getInvoiceTotal(invoice))}</td><td className="px-6 py-4"><StatusBadge status={invoice.status} /></td></tr>)}</tbody></table>
             ) : (
               <div className="px-6 py-12 text-center">
                 <FileText className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-700" />

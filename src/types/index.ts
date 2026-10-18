@@ -46,6 +46,8 @@ export interface Quotation {
   showBankDetails?: boolean;
   showUpiDetails?: boolean;
   terms?: string[];
+  pricingMode?: 'itemized' | 'package';
+  packageAmount?: number;
 }
 
 export interface InvoiceItem {
@@ -82,6 +84,8 @@ export interface Invoice {
   taxLabel?: string;
   discountValue?: number;
   discountUnit?: 'flat' | 'percent';
+  pricingMode?: 'itemized' | 'package';
+  packageAmount?: number;
 }
 
 export interface Payment {

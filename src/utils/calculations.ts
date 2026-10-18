@@ -31,16 +31,27 @@ export const getCgst = (items: { quantity: number; rate: number }[]): number =>
 export const getSgst = (items: { quantity: number; rate: number }[]): number =>
   getGstAmount(items) / 2;
 
-export const getInvoiceTotal = (items: { quantity: number; rate: number }[]): number =>
-  getSubtotal(items) * (1 + GST_RATE);
+export const getInvoiceSubtotal = (invoice: Pick<Invoice, 'items' | 'pricingMode' | 'packageAmount'>): number =>
+  invoice.pricingMode === 'package'
+    ? (Number(invoice.packageAmount ?? 0) || 0)
+    : getSubtotal(invoice.items);
+
+export const getInvoiceTotal = (invoice: Pick<Invoice, 'items' | 'pricingMode' | 'packageAmount' | 'taxEnabled' | 'taxRate' | 'discountValue' | 'discountUnit'>): number => {
+  const base = getInvoiceSubtotal(invoice);
+  const dVal = Number(invoice.discountValue ?? 0) || 0;
+  const discountAmount = invoice.discountUnit === 'flat' ? Math.min(dVal, base) : base * dVal / 100;
+  const taxable = Math.max(base - discountAmount, 0);
+  const taxRate = invoice.taxEnabled === false ? 0 : (invoice.taxRate ?? 18);
+  return taxable * (1 + taxRate / 100);
+};
 
 export const getInvoicePaidAmount = (invoice: Invoice): number => invoice.paidAmount;
 
 export const getInvoiceBalance = (invoice: Invoice): number =>
-  getInvoiceTotal(invoice.items) - invoice.paidAmount;
+  getInvoiceTotal(invoice) - invoice.paidAmount;
 
 export const getInvoiceStatus = (invoice: Invoice): Invoice['status'] => {
-  const total = getInvoiceTotal(invoice.items);
+  const total = getInvoiceTotal(invoice);
   if (invoice.paidAmount >= total && total > 0) return 'Paid';
   if (invoice.paidAmount > 0) return 'Partial';
   const due = new Date(invoice.dueDate);

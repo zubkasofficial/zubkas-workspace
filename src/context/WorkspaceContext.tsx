@@ -87,6 +87,7 @@ function rowToQuotation(r: Record<string, unknown>): Quotation {
     discountValue: r.discount_value, discountUnit: r.discount_unit,
     showBankDetails: r.show_bank_details, showUpiDetails: r.show_upi_details,
     terms: r.terms,
+    pricingMode: r.pricing_mode, packageAmount: Number(r.package_amount ?? 0),
   };
 }
 function quotationToRow(q: Quotation) {
@@ -99,6 +100,7 @@ function quotationToRow(q: Quotation) {
     discount_value: q.discountValue, discount_unit: q.discountUnit,
     show_bank_details: q.showBankDetails, show_upi_details: q.showUpiDetails,
     terms: q.terms,
+    pricing_mode: q.pricingMode, package_amount: q.packageAmount,
   };
 }
 
@@ -112,6 +114,7 @@ function rowToInvoice(r: Record<string, unknown>): Invoice {
     subscriptionId: r.subscription_id, referenceId: r.reference_id,
     taxEnabled: r.tax_enabled, taxType: r.tax_type, taxRate: r.tax_rate, taxLabel: r.tax_label,
     discountValue: r.discount_value, discountUnit: r.discount_unit,
+    pricingMode: r.pricing_mode, packageAmount: Number(r.package_amount ?? 0),
   };
 }
 function invoiceToRow(inv: Invoice) {
@@ -123,6 +126,7 @@ function invoiceToRow(inv: Invoice) {
     subscription_id: inv.subscriptionId, reference_id: inv.referenceId,
     tax_enabled: inv.taxEnabled, tax_type: inv.taxType, tax_rate: inv.taxRate, tax_label: inv.taxLabel,
     discount_value: inv.discountValue, discount_unit: inv.discountUnit,
+    pricing_mode: inv.pricingMode, package_amount: inv.packageAmount,
   };
 }
 
@@ -241,7 +245,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const updatedInvoice: Invoice = {
       ...invoice,
       paidAmount,
-      balanceDue: Math.max(getInvoiceTotal(invoice.items) - paidAmount, 0),
+      balanceDue: Math.max(getInvoiceTotal(invoice) - paidAmount, 0),
       status: getInvoiceStatus({ ...invoice, paidAmount }),
     };
     const payment: Payment = {
@@ -253,7 +257,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const hasProject = isRecurring || prev.projects.some((project) => project.invoiceId === invoice.id);
     const clientName = prev.clients.find((client) => client.id === invoice.clientId)?.name ?? invoice.invoiceNumber;
     const project: Project = {
-      ...newProject(`Project - ${clientName}`, invoice.clientId, getInvoiceTotal(invoice.items)),
+      ...newProject(`Project - ${clientName}`, invoice.clientId, getInvoiceTotal(invoice)),
       invoiceId: invoice.id,
       description: `Auto-generated from Invoice ${invoice.invoiceNumber}`,
     };
@@ -393,9 +397,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         notes: quotation.notes,
         status: 'Unpaid',
         paidAmount: 0,
-        balanceDue: quotation.taxEnabled === false
-          ? quotation.items.reduce((sum, item) => sum + item.quantity * item.rate, 0)
-          : getInvoiceTotal(quotation.items),
+        balanceDue: (() => {
+          const isPackage = quotation.pricingMode === 'package';
+          const base = isPackage ? (Number(quotation.packageAmount ?? 0) || 0) : quotation.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+          const dVal = Number(quotation.discountValue ?? 0) || 0;
+          const discountAmount = quotation.discountUnit === 'flat' ? Math.min(dVal, base) : base * dVal / 100;
+          const taxable = Math.max(base - discountAmount, 0);
+          const taxRate = quotation.taxEnabled === false ? 0 : (quotation.taxRate ?? 18);
+          return taxable * (1 + taxRate / 100);
+        })(),
         createdAt: new Date().toISOString().split('T')[0],
         invoiceType: quotation.quotationType === 'subscription' ? 'recurring' : 'regular',
         subscriptionCategory: quotation.subscriptionCategory,
@@ -406,6 +416,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         taxType: quotation.taxEnabled === false ? 'none' : (quotation.taxType ?? 'custom'),
         taxRate: quotation.taxEnabled === false ? 0 : (quotation.taxRate ?? 18),
         taxLabel: quotation.taxLabel,
+        discountValue: quotation.discountValue,
+        discountUnit: quotation.discountUnit,
+        pricingMode: quotation.pricingMode,
+        packageAmount: quotation.packageAmount,
       };
       const linkedSub = prev.subscriptions.find((s) => s.referenceId === quotationId);
       const updatedQuote = { ...quotation, status: 'Accepted' as const };
@@ -568,7 +582,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       let updatedInvoice: Invoice | null = null;
       if (invoice) {
         const newPaidAmount = Math.max(invoice.paidAmount - payment.amount, 0);
-        const total = getInvoiceTotal(invoice.items);
+        const total = getInvoiceTotal(invoice);
         const newBalance = Math.max(total - newPaidAmount, 0);
         const dueDate = new Date(invoice.dueDate);
         const finalStatus: InvoiceStatus =

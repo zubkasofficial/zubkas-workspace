@@ -177,6 +177,13 @@ function Quotations({ onDelete, onView }: { onDelete: (q: Quotation) => void; on
       emptyMessage="No quotations yet"
       rows={db.quotations.map((item) => {
         const isSubscription = item.quotationType === 'subscription';
+        const isPackage = item.pricingMode === 'package';
+        const subtotal = isPackage ? (Number(item.packageAmount ?? 0) || 0) : item.items.reduce((sum, line) => sum + line.quantity * line.rate, 0);
+        const dVal = Number(item.discountValue ?? 0) || 0;
+        const discountAmount = item.discountUnit === 'percent' ? subtotal * dVal / 100 : Math.min(dVal, subtotal);
+        const taxableAmount = Math.max(subtotal - discountAmount, 0);
+        const taxRate = item.taxEnabled === false ? 0 : (item.taxRate ?? 18);
+        const grandTotal = taxableAmount * (1 + taxRate / 100);
         return [
           <div>
             <span className="font-semibold text-brand-600 dark:text-brand-400">{item.quoteNumber}</span>
@@ -186,7 +193,7 @@ function Quotations({ onDelete, onView }: { onDelete: (q: Quotation) => void; on
           </span>,
           <span className="text-slate-600 dark:text-slate-300">{db.clients.find((client) => client.id === item.clientId)?.name ?? 'Unknown'}</span>,
           <span className="text-slate-600 dark:text-slate-300">{new Date(item.validUntil).toLocaleDateString('en-IN')}</span>,
-          <span className="font-semibold text-slate-800 dark:text-slate-200">{currency(item.items.reduce((sum, line) => sum + line.quantity * line.rate, 0) * (item.taxEnabled === false ? 1 : 1.18))}</span>,
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{currency(grandTotal)}</span>,
           <StatusBadge status={item.status} />,
           <div className="flex items-center gap-2">
             <button

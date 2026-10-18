@@ -84,7 +84,7 @@ export function Invoices() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {invoices.map((invoice) => {
                 const client = db.clients.find((item) => item.id === invoice.clientId);
-                const total = getInvoiceTotal(invoice.items);
+                const total = getInvoiceTotal(invoice);
                 const payCount = linkedPaymentsCount(invoice.id);
                 return (
                   <tr key={invoice.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
