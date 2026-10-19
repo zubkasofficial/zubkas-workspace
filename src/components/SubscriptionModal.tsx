@@ -147,6 +147,8 @@ export function SubscriptionModal({ open, onClose, subscription }: SubscriptionM
             <option value="active">Active</option>
             <option value="paused">Paused</option>
             <option value="cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
+            <option value="expired">Expired</option>
           </select>
         </div>
         <div className="flex justify-end gap-3 pt-3">

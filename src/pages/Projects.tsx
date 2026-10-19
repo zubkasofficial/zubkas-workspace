@@ -1,12 +1,14 @@
-import { CalendarDays, ChevronDown, SquareCheck as CheckSquare, Plus, TriangleAlert as AlertTriangle, Users } from 'lucide-react';
+import { CalendarDays, ChevronDown, SquareCheck as CheckSquare, Plus, TriangleAlert as AlertTriangle, Trash2, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { formatCurrency } from '@/utils/calculations';
 import { ProjectModal } from '@/components/ProjectModal';
 import { ProjectTaskModal } from '@/components/ProjectTaskModal';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useProjectTasks, isOverdue } from '@/hooks/useProjectTasks';
 import { useAuth } from '@/context/AuthContext';
 import { useEmployees } from '@/hooks/useEmployees';
+import { useToast } from '@/context/ToastContext';
 import type { Project, ProjectStatus } from '@/types';
 
 const columns: { status: ProjectStatus; color: string }[] = [
@@ -17,13 +19,15 @@ const columns: { status: ProjectStatus; color: string }[] = [
 ];
 
 export function Projects() {
-  const { db, updateProjectStatus } = useWorkspace();
+  const { db, updateProjectStatus, deleteProject } = useWorkspace();
   const { tasks, getProjectTasks } = useProjectTasks();
   const { user } = useAuth();
   const { employees: allEmployees } = useEmployees();
+  const { showToast } = useToast();
   const isEmployee = user?.role === 'employee';
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   const visibleProjects = useMemo(() => {
     if (!isEmployee || !user) return db.projects;
@@ -72,7 +76,18 @@ export function Projects() {
                       onClick={() => openTaskModal(project)}
                       className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-brand-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 dark:hover:border-brand-700"
                     >
-                      <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{project.name}</h5>
+                      <div className="flex items-start justify-between gap-2">
+                        <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{project.name}</h5>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(project); }}
+                          className="shrink-0 rounded-md p-1 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-900/20 dark:hover:text-rose-400"
+                          title="Delete Project"
+                          aria-label="Delete project"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                       <p className="mt-1 text-xs text-slate-500">{db.clients.find((client) => client.id === project.clientId)?.name ?? 'Unassigned'}</p>
                       {project.description && <p className="mt-1.5 text-xs text-slate-400 line-clamp-2">{project.description}</p>}
                       <div className="mt-4 flex items-center justify-between text-xs text-slate-400">
@@ -138,6 +153,21 @@ export function Projects() {
       </div>
       <ProjectModal open={modalOpen} onClose={() => setModalOpen(false)} />
       <ProjectTaskModal project={selectedProject} onClose={() => setSelectedProject(null)} />
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Project"
+        message={`Are you sure you want to delete this project${deleteTarget ? ` "${deleteTarget.name}"` : ''}? This will also remove all associated tasks.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (deleteTarget) {
+            deleteProject(deleteTarget.id);
+            showToast(`${deleteTarget.name} deleted`, 'success');
+          }
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

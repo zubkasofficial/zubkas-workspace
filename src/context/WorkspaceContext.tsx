@@ -39,6 +39,7 @@ interface WorkspaceContextValue {
   addProject: (project: Project) => void;
   updateProject: (projectId: string, updates: Partial<Omit<Project, 'id'>>) => void;
   updateProjectStatus: (projectId: string, status: Project['status']) => void;
+  deleteProject: (projectId: string) => void;
   addClient: (client: Client) => void;
   updateClient: (client: Client) => void;
   deleteClient: (clientId: string) => void;
@@ -349,6 +350,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const updateProjectStatus = (projectId: string, status: Project['status']) => {
     updateProject(projectId, { status });
+  };
+
+  const deleteProject = (projectId: string) => {
+    setDb((prev) => ({
+      ...prev,
+      projects: prev.projects.filter((p) => p.id !== projectId),
+    }));
+    deleteRow('projects', projectId);
+    supabase.from('project_tasks').delete().eq('project_id', projectId).then(({ error }) => { if (error) console.error('delete project_tasks:', error.message); });
+    window.dispatchEvent(new CustomEvent('zubkas_project_deleted', { detail: { projectId } }));
   };
 
   const addClient = (client: Client) => {
@@ -791,7 +802,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
+    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, deleteProject, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
       {children}
     </WorkspaceContext.Provider>
   );

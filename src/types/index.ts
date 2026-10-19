@@ -123,7 +123,7 @@ export interface Project {
   assignedMemberIds?: string[];
 }
 
-export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'expired';
+export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'completed' | 'expired';
 export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
 
 export interface Subscription {

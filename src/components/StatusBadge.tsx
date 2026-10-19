@@ -1,6 +1,6 @@
 import type { InvoiceStatus, ProjectStatus, QuotationStatus } from '@/types';
 
-type BadgeValue = InvoiceStatus | ProjectStatus | QuotationStatus | 'active' | 'paused' | 'cancelled' | 'expired';
+type BadgeValue = InvoiceStatus | ProjectStatus | QuotationStatus | 'active' | 'paused' | 'cancelled' | 'completed' | 'expired';
 
 const styles: Record<BadgeValue, string> = {
   Paid: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
@@ -18,7 +18,8 @@ const styles: Record<BadgeValue, string> = {
   'In Review': 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   cancelled: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 capitalize',
   paused: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 capitalize',
-  expired: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400 capitalize',
+  completed: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 capitalize',
+  expired: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 capitalize',
 };
 
 export function StatusBadge({ status }: { status: BadgeValue }) {
