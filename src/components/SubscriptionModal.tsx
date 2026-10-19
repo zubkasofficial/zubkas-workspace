@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Lock } from 'lucide-react';
 import type { BillingCycle, Subscription, SubscriptionStatus } from '@/types';
 import { Modal, inputClass, labelClass } from '@/components/Modal';
 import { calculateNextBillingDate, generateId, todayISO } from '@/utils/calculations';
@@ -65,7 +66,7 @@ export function SubscriptionModal({ open, onClose, subscription }: SubscriptionM
         name: trimmedName,
         clientId: clientId.trim(),
         category: trimmedCategory,
-        amount: parsedAmount,
+        amount: subscription.amount,
         billingCycle,
         startDate,
         endDate: endDate || calculateNextBillingDate(startDate, billingCycle),
@@ -122,7 +123,26 @@ export function SubscriptionModal({ open, onClose, subscription }: SubscriptionM
           </div>
           <div>
             <label className={labelClass}>Amount (₹) *</label>
-            <input required type="number" min="1" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputClass} />
+            <div className="relative">
+              <input
+                required
+                type="number"
+                min="1"
+                value={amount}
+                onChange={isEdit ? undefined : (e) => setAmount(e.target.value)}
+                readOnly={isEdit}
+                placeholder="0"
+                className={isEdit
+                  ? 'w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 text-sm text-slate-500 outline-none cursor-not-allowed dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400 min-h-[44px] pr-10'
+                  : inputClass}
+              />
+              {isEdit && (
+                <Lock className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+              )}
+            </div>
+            {isEdit && (
+              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Amount cannot be edited directly from subscription. Price is fixed from invoice/quotation.</p>
+            )}
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
