@@ -14,10 +14,20 @@ export const parseTransactionDate = (dateStr: string): Date => {
 };
 
 export const formatCurrency = (amount: number): string =>
-  `₹${Math.round(amount).toLocaleString('en-IN')}`;
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(Math.round(Number(amount) || 0));
 
 export const formatCurrencyDetailed = (amount: number): string =>
-  `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(Math.round(Number(amount) || 0));
 
 export const getSubtotal = (items: { quantity: number; rate: number }[]): number =>
   items.reduce((sum, item) => sum + item.quantity * item.rate, 0);

@@ -79,7 +79,7 @@ export function Subscriptions() {
 
   useEffect(() => {
     syncSubscriptionsFromQuotations();
-  }, [syncSubscriptionsFromQuotations, db.quotations]);
+  }, [syncSubscriptionsFromQuotations]);
 
   useEffect(() => {
     const handler = () => syncSubscriptionsFromQuotations();

@@ -455,8 +455,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   };
 
   const addSubscription = (subscription: Subscription) => {
-    setDb((prev) => ({ ...prev, subscriptions: [...prev.subscriptions, subscription] }));
-    upsertRow('subscriptions', subscriptionToRow(subscription));
+    setDb((prev) => {
+      // Guard against duplicate insertion: if a subscription with the same referenceId
+      // (quotation link) or the same name+client+category already exists, skip.
+      const isDuplicate = prev.subscriptions.some((s) =>
+        (subscription.referenceId && s.referenceId === subscription.referenceId) ||
+        (s.name === subscription.name && s.clientId === subscription.clientId && s.category === subscription.category)
+      );
+      if (isDuplicate) return prev;
+      upsertRow('subscriptions', subscriptionToRow(subscription));
+      return { ...prev, subscriptions: [...prev.subscriptions, subscription] };
+    });
     window.dispatchEvent(new Event('subscriptions_updated'));
   };
 
@@ -762,18 +771,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const syncSubscriptionsFromQuotations = () => {
     setDb((prev) => {
       const recurringQuotes = prev.quotations.filter((q) => q.quotationType === 'subscription');
-      const existingIds = new Set(prev.subscriptions.map((s) => s.referenceId));
+      // Deduplicate by referenceId AND by name+client+category to prevent duplicate rows
+      const existingByRef = new Set(prev.subscriptions.map((s) => s.referenceId).filter(Boolean));
+      const existingByKey = new Set(prev.subscriptions.map((s) => `${s.name}|${s.clientId}|${s.category}`));
       const newSubs: Subscription[] = [];
       for (const quote of recurringQuotes) {
-        if (existingIds.has(quote.id)) continue;
+        if (existingByRef.has(quote.id)) continue;
+        const subName = quote.items[0]?.description || 'Recurring Subscription';
+        const subCategory = quote.subscriptionCategory || 'Web Hosting & Maintenance';
+        const dedupeKey = `${subName}|${quote.clientId}|${subCategory}`;
+        if (existingByKey.has(dedupeKey)) continue;
+        existingByKey.add(dedupeKey);
         const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
         const taxMultiplier = quote.taxEnabled === false ? 1 : (1 + (quote.taxRate ?? 18) / 100);
         const grandTotal = subtotal * taxMultiplier;
         const sub: Subscription = {
           id: generateId('sub'),
-          name: quote.items[0]?.description || 'Recurring Subscription',
+          name: subName,
           clientId: quote.clientId,
-          category: quote.subscriptionCategory || 'Web Hosting & Maintenance',
+          category: subCategory,
           amount: grandTotal,
           billingCycle: 'monthly',
           nextBillingDate: calculateNextBillingDate(quote.subscriptionStartDate || quote.date, 'monthly'),
