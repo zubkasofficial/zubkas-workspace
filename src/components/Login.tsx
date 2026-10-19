@@ -353,8 +353,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col overflow-hidden lg:flex-row">
-      {/* LEFT — Brand showcase (desktop only) */}
-      <div className="relative hidden min-h-screen flex-col justify-between p-8 text-white lg:flex lg:w-1/2 xl:p-12" style={{ background: heroGradient }}>
+      {/* LEFT — Brand showcase (top on mobile, left on desktop) */}
+      <div className="relative flex w-full flex-col justify-between p-6 py-8 text-white lg:min-h-screen lg:w-1/2 lg:p-8 xl:p-12" style={{ background: heroGradient }}>
         {/* Brand header */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
@@ -368,13 +368,23 @@ export function Login({ onLogin }: { onLogin: () => void }) {
 
         {/* Center content */}
         <div className="relative z-10 my-auto w-full max-w-lg">
-          <h2 className="text-2xl font-bold tracking-tight text-white leading-snug xl:text-3xl">
+          <h2 className="text-xl font-bold tracking-tight text-white leading-snug lg:text-2xl xl:text-3xl">
             Empowering Business Operations &amp; Financial Management with Intelligent Precision
           </h2>
           <p className="mt-2.5 mb-5 text-xs font-normal leading-relaxed text-white/80 xl:text-sm">
             Streamline invoicing, accounting, projects, and client management from a single unified workspace.
           </p>
-          <div className="space-y-2.5">
+          {/* Concise highlight badges — mobile only */}
+          <div className="mb-5 grid grid-cols-2 gap-2 lg:hidden">
+            {FEATURES.map((feature) => (
+              <div key={feature.title} className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-2.5 py-2 text-[11px] font-medium text-white/90 backdrop-blur-sm">
+                <feature.icon className="h-4 w-4 shrink-0 text-white" />
+                <span className="truncate">{feature.title.split('&')[0].trim()}</span>
+              </div>
+            ))}
+          </div>
+          {/* Full feature list — desktop only */}
+          <div className="hidden space-y-2.5 lg:block">
             {FEATURES.map((feature) => (
               <div
                 key={feature.title}
@@ -392,8 +402,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
 
-        {/* Trust badge */}
-        <div className="relative z-10">
+        {/* Trust badge — desktop only */}
+        <div className="relative z-10 hidden lg:block">
           <div className="flex w-fit items-center gap-2 rounded-lg border border-white/15 bg-white/10 py-1.5 px-3 text-xs text-white/80 backdrop-blur-sm">
             <ShieldCheck className="h-4 w-4 shrink-0 text-white/80" />
             <span>Trusted by enterprise clients across Chennai &amp; beyond</span>
@@ -401,11 +411,11 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         </div>
       </div>
 
-      {/* RIGHT — Auth section */}
-      <div className="flex w-full min-h-screen flex-col items-center justify-between bg-slate-50 p-6 text-slate-900 dark:bg-slate-950 dark:text-white sm:p-10 lg:w-1/2">
-        <div className="my-auto w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
-          {/* Mobile brand header — visible on all sizes */}
-          <div className="mb-6 flex items-center gap-3">
+      {/* RIGHT — Auth section (bottom on mobile, right on desktop) */}
+      <div className="flex w-full min-h-screen flex-col items-center justify-between bg-slate-50 p-4 py-8 text-slate-900 dark:bg-slate-950 dark:text-white sm:p-10 lg:w-1/2 lg:min-h-screen lg:p-6">
+        <div className="my-auto w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+          {/* Brand header — desktop only (mobile branding lives in the maroon top panel) */}
+          <div className="mb-6 hidden items-center gap-3 lg:flex">
             <img src="/zubkas_icon_hd_new.png" alt="Zubkas Workspace" className="h-9 w-auto shrink-0 object-contain" />
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">ZUBKAS WORKSPACE</h1>
