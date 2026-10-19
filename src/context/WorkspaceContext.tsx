@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { AppDatabase, Invoice, InvoiceStatus, Payment, PaymentMethod, AccountingEntry, Project, Client, Quotation, Subscription, SubscriptionStatus } from '@/types';
+import type { AppDatabase, Invoice, InvoiceStatus, Payment, PaymentMethod, AccountingEntry, Project, Client, Quotation, Subscription, SubscriptionStatus, BillingCycle } from '@/types';
 import {
   generateId,
   generateInvoiceNumber,
@@ -240,6 +240,46 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     upsertRow('invoices', invoiceToRow(invoice));
   };
 
+  // When a recurring invoice (originating from a subscription-type quotation) is
+  // fully paid, auto-instantiate the active subscription. Deduped by invoice id so
+  // a second payment never creates a duplicate.
+  const maybeCreateSubscriptionOnPayment = (prev: AppDatabase, invoice: Invoice, paymentDate: string): { prev: AppDatabase; created: Subscription | null } => {
+    if (invoice.invoiceType !== 'recurring') return { prev, created: null };
+    const newPaid = invoice.paidAmount;
+    const total = getInvoiceTotal(invoice);
+    if (total <= 0 || newPaid < total) return { prev, created: null };
+    const quote = prev.quotations.find((q) => q.id === invoice.referenceId);
+    const subName = invoice.items[0]?.description || quote?.items[0]?.description || 'Recurring Subscription';
+    const subCategory = invoice.subscriptionCategory || quote?.subscriptionCategory || 'Recurring Service';
+    const startDate = invoice.subscriptionStartDate || paymentDate || invoice.date;
+    const billingCycle: BillingCycle = 'monthly';
+    const isDuplicate = prev.subscriptions.some((s) =>
+      (invoice.referenceId && s.referenceId === invoice.referenceId) ||
+      (s.invoiceId === invoice.id) ||
+      (s.name === subName && s.clientId === invoice.clientId && s.category === subCategory)
+    );
+    if (isDuplicate) return { prev, created: null };
+    const sub: Subscription = {
+      id: generateId('sub'),
+      name: subName,
+      clientId: invoice.clientId,
+      category: subCategory,
+      amount: getInvoiceTotal(invoice),
+      billingCycle,
+      nextBillingDate: calculateNextBillingDate(startDate, billingCycle),
+      status: 'active',
+      startDate,
+      endDate: invoice.subscriptionEndDate,
+      referenceId: invoice.referenceId,
+      invoiceId: invoice.id,
+      paymentMethod: 'Auto / Invoiced',
+      origin: 'quotation',
+    };
+    upsertRow('subscriptions', subscriptionToRow(sub));
+    window.dispatchEvent(new Event('subscriptions_updated'));
+    return { prev: { ...prev, subscriptions: [...prev.subscriptions, sub] }, created: sub };
+  };
+
   const runPaymentChain = (prev: AppDatabase, invoiceId: string, amount: number, method: PaymentMethod, date: string, reference: string): { next: AppDatabase; payment: Payment; projectCreated: boolean; updatedInvoice: Invoice; accounting: AccountingEntry; project: Project; hasProject: boolean } => {
     const invoice = prev.invoices.find((item) => item.id === invoiceId);
     if (!invoice) throw new Error('Invoice not found');
@@ -263,13 +303,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       invoiceId: invoice.id,
       description: `Auto-generated from Invoice ${invoice.invoiceNumber}`,
     };
-    const next: AppDatabase = {
+    let next: AppDatabase = {
       ...prev,
       invoices: prev.invoices.map((item) => item.id === invoiceId ? updatedInvoice : item),
       payments: [...prev.payments, payment],
       accounting: [...prev.accounting, accounting],
       projects: hasProject ? prev.projects : [...prev.projects, project],
     };
+    // Auto-instantiate subscription only when the recurring invoice is fully paid.
+    const subResult = maybeCreateSubscriptionOnPayment(next, updatedInvoice, date);
+    next = subResult.prev;
     return { next, payment, projectCreated: !hasProject, updatedInvoice, accounting, project, hasProject };
   };
 
@@ -311,10 +354,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!invoice) return prev;
       if (invoice.status === 'Paid' && getInvoiceBalance(invoice) <= 0) return prev;
       const balance = getInvoiceBalance(invoice);
+      let next: AppDatabase;
       if (balance <= 0) {
         const updated = { ...invoice, status: 'Paid' as InvoiceStatus };
         upsertRow('invoices', invoiceToRow(updated));
-        return { ...prev, invoices: prev.invoices.map((item) => item.id === invoiceId ? updated : item) };
+        next = { ...prev, invoices: prev.invoices.map((item) => item.id === invoiceId ? updated : item) };
+        const subResult = maybeCreateSubscriptionOnPayment(next, updated, todayISO());
+        next = subResult.prev;
+        return next;
       }
       const chain = runPaymentChain(prev, invoiceId, balance, 'Bank Transfer', todayISO(), invoice.invoiceNumber);
       result = { payment: chain.payment, projectCreated: chain.projectCreated };
@@ -433,23 +480,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         pricingMode: quotation.pricingMode,
         packageAmount: quotation.packageAmount,
       };
-      const linkedSub = prev.subscriptions.find((s) => s.referenceId === quotationId);
       const updatedQuote = { ...quotation, status: 'Accepted' as const };
 
+      // Lifecycle: converting a quotation to an invoice does NOT create a
+      // subscription. The subscription is auto-instantiated only when the
+      // recurring invoice is fully paid (handled in runPaymentChain).
       upsertRow('invoices', invoiceToRow(invoice));
       upsertRow('quotations', quotationToRow(updatedQuote));
-      if (linkedSub) {
-        const updatedSub = { ...linkedSub, invoiceId: invoice.id, origin: 'quotation' as const };
-        upsertRow('subscriptions', subscriptionToRow(updatedSub));
-      }
 
       return {
         ...prev,
         invoices: [...prev.invoices, invoice],
         quotations: prev.quotations.map((q) => q.id === quotationId ? updatedQuote : q),
-        subscriptions: linkedSub
-          ? prev.subscriptions.map((s) => s.referenceId === quotationId ? { ...s, invoiceId: invoice.id, origin: 'quotation' } : s)
-          : prev.subscriptions,
       };
     });
   };
@@ -768,44 +810,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     deleteRow('accounting_entries', entryId);
   };
 
+  // Lifecycle: subscriptions are no longer auto-created from quotations.
+  // They are instantiated only when a recurring invoice is fully paid.
+  // This function is retained for API compatibility but is a no-op.
   const syncSubscriptionsFromQuotations = () => {
-    setDb((prev) => {
-      const recurringQuotes = prev.quotations.filter((q) => q.quotationType === 'subscription');
-      // Deduplicate by referenceId AND by name+client+category to prevent duplicate rows
-      const existingByRef = new Set(prev.subscriptions.map((s) => s.referenceId).filter(Boolean));
-      const existingByKey = new Set(prev.subscriptions.map((s) => `${s.name}|${s.clientId}|${s.category}`));
-      const newSubs: Subscription[] = [];
-      for (const quote of recurringQuotes) {
-        if (existingByRef.has(quote.id)) continue;
-        const subName = quote.items[0]?.description || 'Recurring Subscription';
-        const subCategory = quote.subscriptionCategory || 'Web Hosting & Maintenance';
-        const dedupeKey = `${subName}|${quote.clientId}|${subCategory}`;
-        if (existingByKey.has(dedupeKey)) continue;
-        existingByKey.add(dedupeKey);
-        const subtotal = quote.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-        const taxMultiplier = quote.taxEnabled === false ? 1 : (1 + (quote.taxRate ?? 18) / 100);
-        const grandTotal = subtotal * taxMultiplier;
-        const sub: Subscription = {
-          id: generateId('sub'),
-          name: subName,
-          clientId: quote.clientId,
-          category: subCategory,
-          amount: grandTotal,
-          billingCycle: 'monthly',
-          nextBillingDate: calculateNextBillingDate(quote.subscriptionStartDate || quote.date, 'monthly'),
-          status: 'active',
-          startDate: quote.subscriptionStartDate || quote.date,
-          endDate: quote.subscriptionEndDate || quote.validUntil,
-          referenceId: quote.id,
-          paymentMethod: 'Auto / Invoiced',
-          origin: 'quotation',
-        };
-        newSubs.push(sub);
-        upsertRow('subscriptions', subscriptionToRow(sub));
-      }
-      if (newSubs.length === 0) return prev;
-      return { ...prev, subscriptions: [...prev.subscriptions, ...newSubs] };
-    });
+    // intentionally no-op — see runPaymentChain / maybeCreateSubscriptionOnPayment
   };
 
   if (!loaded) return (

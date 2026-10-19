@@ -42,7 +42,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   />
                   {item.income > 0 && (
                     <span className="opacity-0 group-hover:opacity-100 absolute -top-7 text-[10px] bg-slate-900 text-white px-1.5 py-0.5 rounded shadow whitespace-nowrap pointer-events-none transition-opacity">
-                      ₹{item.income.toLocaleString('en-IN')}
+                      ₹{Math.round(item.income).toLocaleString('en-IN')}
                     </span>
                   )}
                 </div>
@@ -54,7 +54,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
                   />
                   {item.expense > 0 && (
                     <span className="opacity-0 group-hover:opacity-100 absolute -top-7 text-[10px] bg-slate-900 text-white px-1.5 py-0.5 rounded shadow whitespace-nowrap pointer-events-none transition-opacity">
-                      ₹{item.expense.toLocaleString('en-IN')}
+                      ₹{Math.round(item.expense).toLocaleString('en-IN')}
                     </span>
                   )}
                 </div>

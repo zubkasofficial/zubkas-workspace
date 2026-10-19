@@ -16,7 +16,7 @@ import type { PageKey } from '@/components/Sidebar';
 interface GenericPageProps { page: Exclude<PageKey, 'dashboard' | 'invoices' | 'accounting' | 'projects' | 'tasks' | 'reports' | 'employees' | 'profile'> }
 const titles: Record<GenericPageProps['page'], string> = { clients: 'Client Directory', quotations: 'Quotation Pipeline', payments: 'Payment Ledger', subscriptions: 'Recurring Costs', settings: 'Workspace Settings' };
 const subtitles: Record<GenericPageProps['page'], string> = { clients: 'Manage your client relationships', quotations: 'Create and track price quotes', payments: 'View payment history and ledger', subscriptions: 'Track recurring software costs', settings: 'Configure your workspace preferences' };
-const currency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
+const currency = (amount: number) => `₹${Math.round(Number(amount) || 0).toLocaleString('en-IN')}`;
 
 export function GenericPage({ page }: GenericPageProps) {
   const [search, setSearch] = useState('');

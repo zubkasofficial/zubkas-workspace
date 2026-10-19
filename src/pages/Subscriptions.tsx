@@ -67,7 +67,7 @@ function StatCard({ title, value, icon: Icon, color }: StatCardData) {
 }
 
 export function Subscriptions() {
-  const { db, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations } = useWorkspace();
+  const { db, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription } = useWorkspace();
   const { showToast } = useToast();
   const { categories } = useSubscriptionCategories();
   const [search, setSearch] = useState('');
@@ -77,15 +77,14 @@ export function Subscriptions() {
   const [editingSub, setEditingSub] = useState<Subscription | null>(null);
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
 
+  // Lifecycle: subscriptions are now created only when a recurring invoice is
+  // fully paid — no longer synced from quotations. Subscribe to payment updates
+  // so the list refreshes when a new subscription is auto-instantiated.
   useEffect(() => {
-    syncSubscriptionsFromQuotations();
-  }, [syncSubscriptionsFromQuotations]);
-
-  useEffect(() => {
-    const handler = () => syncSubscriptionsFromQuotations();
+    const handler = () => setSubModalOpen((v) => v);
     window.addEventListener('subscriptions_updated', handler);
     return () => window.removeEventListener('subscriptions_updated', handler);
-  }, [syncSubscriptionsFromQuotations]);
+  }, []);
 
   const activeCount = useMemo(
     () => db.subscriptions.filter((s) => s.status === 'active').length,
