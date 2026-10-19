@@ -45,6 +45,7 @@ interface WorkspaceContextValue {
   addQuotation: (quotation: Quotation) => void;
   convertQuotationToInvoice: (quotationId: string) => void;
   addSubscription: (subscription: Subscription) => void;
+  updateSubscription: (subscriptionId: string, updates: Partial<Omit<Subscription, 'id'>>) => void;
   updateSubscriptionStatus: (subscriptionId: string, status: SubscriptionStatus) => void;
   deleteSubscription: (subscriptionId: string) => void;
   renewSubscription: (subscriptionId: string) => void;
@@ -448,6 +449,131 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event('subscriptions_updated'));
   };
 
+  const updateSubscription = (subscriptionId: string, updates: Partial<Omit<Subscription, 'id'>>) => {
+    setDb((prev) => {
+      const existing = prev.subscriptions.find((s) => s.id === subscriptionId);
+      if (!existing) return prev;
+      const updatedSub: Subscription = { ...existing, ...updates };
+
+      // Find linked invoice(s) using the same loose match as the Subscriptions page,
+      // plus a fallback by invoiceType=recurring + same client. This ensures the
+      // cascade reaches invoices linked via a shared quotation referenceId or by
+      // recurring+category+client, not just direct subscriptionId links.
+      const linkedInvoices = prev.invoices.filter(
+        (inv) =>
+          inv.id === existing.invoiceId ||
+          inv.subscriptionId === subscriptionId ||
+          inv.referenceId === subscriptionId ||
+          (inv.referenceId !== undefined && existing.referenceId !== undefined && inv.referenceId === existing.referenceId) ||
+          (inv.invoiceType === 'recurring' && inv.subscriptionCategory === existing.category && inv.clientId === existing.clientId)
+      );
+
+      let updatedInvoices = prev.invoices;
+      let updatedPayments = prev.payments;
+      let updatedAccounting = prev.accounting;
+
+      for (const linkedInvoice of linkedInvoices) {
+        const newAmount = updatedSub.amount;
+        const newIssueDate = updatedSub.startDate || linkedInvoice.date;
+        const newDueDate = updatedSub.endDate || linkedInvoice.dueDate;
+
+        // Rebuild invoice: update line item rate, description, dates, category
+        const newItems = linkedInvoice.items.length > 0
+          ? linkedInvoice.items.map((it, idx) => idx === 0 ? { ...it, description: updatedSub.name, rate: newAmount } : it)
+          : [{ id: generateId('ii'), description: updatedSub.name, hsnSac: '998314', quantity: 1, rate: newAmount }];
+        const rebuilt: Invoice = {
+          ...linkedInvoice,
+          items: newItems,
+          date: newIssueDate,
+          dueDate: newDueDate,
+          subscriptionCategory: updatedSub.category,
+          subscriptionStartDate: updatedSub.startDate,
+          subscriptionEndDate: updatedSub.endDate,
+        };
+        const newTotal = getInvoiceTotal(rebuilt);
+        const newBalance = Math.max(newTotal - rebuilt.paidAmount, 0);
+        const newStatus: InvoiceStatus =
+          rebuilt.paidAmount >= newTotal && newTotal > 0 ? 'Paid'
+            : rebuilt.paidAmount > 0 ? 'Partial'
+            : new Date(rebuilt.dueDate) < new Date() ? 'Overdue'
+            : 'Unpaid';
+        const finalInv: Invoice = { ...rebuilt, balanceDue: newBalance, status: newStatus };
+
+        upsertRow('invoices', invoiceToRow(finalInv));
+        updatedInvoices = updatedInvoices.map((inv) => inv.id === linkedInvoice.id ? finalInv : inv);
+
+        // Cascade to linked payments: update amount to match new invoice total and date to new issue date
+        const invoicePayments = updatedPayments.filter((p) => p.invoiceId === linkedInvoice.id);
+        if (invoicePayments.length > 0) {
+          // If single payment covers the invoice, set it to the new total; otherwise scale proportionally
+          const oldTotal = getInvoiceTotal(linkedInvoice);
+          updatedPayments = updatedPayments.map((p) => {
+            if (p.invoiceId !== linkedInvoice.id) return p;
+            let newPayAmount: number;
+            if (oldTotal > 0 && invoicePayments.length > 1) {
+              const ratio = p.amount / oldTotal;
+              newPayAmount = Math.round(newTotal * ratio * 100) / 100;
+            } else {
+              newPayAmount = newTotal;
+            }
+            const updatedPay: Payment = {
+              ...p,
+              amount: newPayAmount,
+              date: newIssueDate,
+              notes: `Payment for ${linkedInvoice.invoiceNumber}`,
+            };
+            upsertRow('payments', paymentToRow(updatedPay));
+            return updatedPay;
+          });
+        }
+
+        // Cascade to accounting entries: update income entries referencing this invoice
+        const invRef = linkedInvoice.invoiceNumber;
+        if (invRef) {
+          updatedAccounting = updatedAccounting.map((entry) => {
+            if (entry.type === 'income' && entry.category === 'Invoice Payment' && entry.reference === invRef) {
+              const matchingPayment = updatedPayments.find((p) => p.invoiceId === linkedInvoice.id && (p.reference === invRef || p.reference === entry.reference));
+              const newEntryAmount = matchingPayment?.amount ?? newTotal;
+              const updatedEntry: AccountingEntry = {
+                ...entry,
+                amount: newEntryAmount,
+                date: newIssueDate,
+                description: `Payment received for ${invRef}`,
+              };
+              upsertRow('accounting_entries', accountingToRow(updatedEntry));
+              return updatedEntry;
+            }
+            return entry;
+          });
+        }
+      }
+
+      // Cascade to linked project budget
+      let updatedProjects = prev.projects;
+      const linkedProject = linkedInvoices.length > 0
+        ? prev.projects.find((p) => linkedInvoices.some((inv) => inv.id === p.invoiceId))
+        : undefined;
+      if (linkedProject) {
+        const refInvoice = updatedInvoices.find((inv) => inv.id === linkedProject.invoiceId);
+        const newBudget = refInvoice ? getInvoiceTotal(refInvoice) : updatedSub.amount;
+        updatedProjects = prev.projects.map((p) => p.id === linkedProject.id ? { ...p, budget: newBudget } : p);
+        const updatedProj = updatedProjects.find((p) => p.id === linkedProject.id);
+        if (updatedProj) upsertRow('projects', projectToRow(updatedProj));
+      }
+
+      upsertRow('subscriptions', subscriptionToRow(updatedSub));
+
+      return {
+        ...prev,
+        subscriptions: prev.subscriptions.map((s) => s.id === subscriptionId ? updatedSub : s),
+        invoices: updatedInvoices,
+        payments: updatedPayments,
+        accounting: updatedAccounting,
+        projects: updatedProjects,
+      };
+    });
+  };
+
   const updateSubscriptionStatus = (subscriptionId: string, status: SubscriptionStatus) => {
     setDb((prev) => {
       const next = prev.subscriptions.map((sub) => sub.id === subscriptionId ? { ...sub, status } : sub);
@@ -665,7 +791,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
+    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
       {children}
     </WorkspaceContext.Provider>
   );

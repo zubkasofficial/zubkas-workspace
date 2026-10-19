@@ -74,7 +74,7 @@ export function Sidebar({ currentPage, onNavigate, darkMode, onToggleDark, onLog
       >
         <div className="flex items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <img src="/zubkas-logo-white.png" alt="Zubkas Workspace" className="h-8 w-auto shrink-0 object-contain" />
+            <img src="/zubkas_icon_hd_white.png" alt="Zubkas Workspace" className="h-8 w-auto shrink-0 object-contain" />
             <div>
               <h1 className="text-sm font-bold text-white">Zubkas Workspace</h1>
             </div>

@@ -358,7 +358,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         {/* Brand header */}
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <img src="/zubkas-logo-white.png" alt="Zubkas Workspace" className="h-9 w-auto shrink-0 object-contain" />
+            <img src="/zubkas_icon_hd_white.png" alt="Zubkas Workspace" className="h-10 w-auto shrink-0 object-contain" />
             <div>
               <h1 className="text-base font-bold tracking-tight text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-white/60">Business Management Suite</p>
@@ -406,7 +406,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         <div className="my-auto w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-8 shadow-xl dark:border-slate-800 dark:bg-slate-900">
           {/* Mobile brand header — visible on all sizes */}
           <div className="mb-6 flex items-center gap-3">
-            <img src="/zubkas-logo.png" alt="Zubkas Workspace" className="h-9 w-auto shrink-0 object-contain" />
+            <img src="/zubkas_icon_hd_new.png" alt="Zubkas Workspace" className="h-9 w-auto shrink-0 object-contain" />
             <div>
               <h1 className="text-sm font-bold tracking-tight text-slate-900 dark:text-white">ZUBKAS WORKSPACE</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">Business Management Suite</p>

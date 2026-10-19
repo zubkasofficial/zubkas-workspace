@@ -43,7 +43,7 @@ export function Header({ currentPage, darkMode, onToggleDark, onOpenSidebar, onN
         </button>
 
         <div className="flex items-center gap-2">
-          <img src="/zubkas-logo.png" alt="Zubkas" className="h-7 w-auto shrink-0 object-contain" />
+          <img src="/zubkas_icon_hd_new.png" alt="Zubkas" className="h-7 w-auto shrink-0 object-contain" />
           <span className="text-sm font-bold text-slate-900 dark:text-white">Zubkas</span>
         </div>
 

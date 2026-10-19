@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { BillingCycle, Subscription, SubscriptionStatus } from '@/types';
 import { Modal, inputClass, labelClass } from '@/components/Modal';
 import { calculateNextBillingDate, generateId, todayISO } from '@/utils/calculations';
@@ -9,22 +9,41 @@ import { useSubscriptionCategories } from '@/hooks/useSubscriptionCategories';
 interface SubscriptionModalProps {
   open: boolean;
   onClose: () => void;
+  subscription?: Subscription | null;
 }
 
 const CYCLES: BillingCycle[] = ['monthly', 'quarterly', 'yearly'];
 
-export function SubscriptionModal({ open, onClose }: SubscriptionModalProps) {
-  const { db, addSubscription } = useWorkspace();
+export function SubscriptionModal({ open, onClose, subscription }: SubscriptionModalProps) {
+  const { db, addSubscription, updateSubscription } = useWorkspace();
   const { showToast } = useToast();
   const { categories } = useSubscriptionCategories();
-  const [name, setName] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [category, setCategory] = useState(categories[0] ?? '');
-  const [amount, setAmount] = useState('');
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
-  const [startDate, setStartDate] = useState(todayISO());
-  const [endDate, setEndDate] = useState('');
-  const [status, setStatus] = useState<SubscriptionStatus>('active');
+  const isEdit = Boolean(subscription);
+
+  const [name, setName] = useState(subscription?.name ?? '');
+  const [clientId, setClientId] = useState(subscription?.clientId ?? '');
+  const [category, setCategory] = useState(subscription?.category ?? categories[0] ?? '');
+  const [amount, setAmount] = useState(subscription ? String(subscription.amount) : '');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(subscription?.billingCycle ?? 'monthly');
+  const [startDate, setStartDate] = useState(subscription?.startDate ?? todayISO());
+  const [endDate, setEndDate] = useState(subscription?.endDate ?? '');
+  const [status, setStatus] = useState<SubscriptionStatus>(subscription?.status ?? 'active');
+
+  useEffect(() => {
+    if (subscription) {
+      setName(subscription.name ?? '');
+      setClientId(subscription.clientId ?? '');
+      setCategory(subscription.category ?? categories[0] ?? '');
+      setAmount(subscription.amount ? String(subscription.amount) : '');
+      setBillingCycle(subscription.billingCycle ?? 'monthly');
+      setStartDate(subscription.startDate ?? todayISO());
+      setEndDate(subscription.endDate ?? '');
+      setStatus(subscription.status ?? 'active');
+    } else {
+      setName(''); setClientId(''); setCategory(categories[0] ?? ''); setAmount('');
+      setBillingCycle('monthly'); setStartDate(todayISO()); setEndDate(''); setStatus('active');
+    }
+  }, [subscription, open, categories]);
 
   const reset = () => {
     setName(''); setClientId(''); setCategory(categories[0] ?? ''); setAmount('');
@@ -40,28 +59,45 @@ export function SubscriptionModal({ open, onClose }: SubscriptionModalProps) {
       showToast('Name, client, category, and a valid amount are required', 'error');
       return;
     }
-    const sub: Subscription = {
-      id: generateId('sub'),
-      name: trimmedName,
-      clientId: clientId.trim(),
-      category: trimmedCategory,
-      amount: parsedAmount,
-      billingCycle,
-      nextBillingDate: calculateNextBillingDate(startDate, billingCycle),
-      status,
-      startDate,
-      endDate: endDate || calculateNextBillingDate(startDate, billingCycle),
-      paymentMethod: 'Auto / Invoiced',
-      origin: 'manual',
-    };
-    addSubscription(sub);
-    onClose();
-    showToast('Subscription added successfully');
-    reset();
+
+    if (isEdit && subscription) {
+      updateSubscription(subscription.id, {
+        name: trimmedName,
+        clientId: clientId.trim(),
+        category: trimmedCategory,
+        amount: parsedAmount,
+        billingCycle,
+        startDate,
+        endDate: endDate || calculateNextBillingDate(startDate, billingCycle),
+        status,
+        nextBillingDate: calculateNextBillingDate(startDate, billingCycle),
+      });
+      onClose();
+      showToast('Subscription updated successfully');
+    } else {
+      const sub: Subscription = {
+        id: generateId('sub'),
+        name: trimmedName,
+        clientId: clientId.trim(),
+        category: trimmedCategory,
+        amount: parsedAmount,
+        billingCycle,
+        nextBillingDate: calculateNextBillingDate(startDate, billingCycle),
+        status,
+        startDate,
+        endDate: endDate || calculateNextBillingDate(startDate, billingCycle),
+        paymentMethod: 'Auto / Invoiced',
+        origin: 'manual',
+      };
+      addSubscription(sub);
+      onClose();
+      showToast('Subscription added successfully');
+      reset();
+    }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Subscription" size="lg">
+    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Subscription' : 'Add Subscription'} size="lg">
       <form onSubmit={submit} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -115,7 +151,9 @@ export function SubscriptionModal({ open, onClose }: SubscriptionModalProps) {
         </div>
         <div className="flex justify-end gap-3 pt-3">
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">Cancel</button>
-          <button type="submit" className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">Add Subscription</button>
+          <button type="submit" className="rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">
+            {isEdit ? 'Save Changes' : 'Add Subscription'}
+          </button>
         </div>
       </form>
     </Modal>

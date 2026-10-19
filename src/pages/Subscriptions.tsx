@@ -1,4 +1,4 @@
-import { CalendarDays, Pause, Play, Plus, Repeat, Search, Settings as SettingsIcon, Trash2, RefreshCw, FileText, TrendingUp, Calendar, DollarSign, Eye } from 'lucide-react';
+import { CalendarDays, Pause, Play, Plus, Repeat, Search, Settings as SettingsIcon, Trash2, RefreshCw, FileText, TrendingUp, Calendar, DollarSign, Eye, Pencil } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
@@ -74,6 +74,7 @@ export function Subscriptions() {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [subModalOpen, setSubModalOpen] = useState(false);
+  const [editingSub, setEditingSub] = useState<Subscription | null>(null);
   const [previewInvoice, setPreviewInvoice] = useState<Invoice | null>(null);
 
   useEffect(() => {
@@ -123,6 +124,16 @@ export function Subscriptions() {
   const handleRenew = (sub: Subscription) => {
     renewSubscription(sub.id);
     showToast('Subscription renewed — next billing date updated');
+  };
+
+  const handleEdit = (sub: Subscription) => {
+    setEditingSub(sub);
+    setSubModalOpen(true);
+  };
+
+  const handleAdd = () => {
+    setEditingSub(null);
+    setSubModalOpen(true);
   };
 
   const findLinkedInvoice = (sub: Subscription): Invoice | undefined =>
@@ -180,7 +191,7 @@ export function Subscriptions() {
             <SettingsIcon className="h-4 w-4" /> Manage Categories
           </button>
           <button
-            onClick={() => setSubModalOpen(true)}
+            onClick={() => handleAdd()}
             className="flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition-colors hover:bg-brand-700"
           >
             <Plus className="h-4 w-4" /> Add Subscription
@@ -254,6 +265,13 @@ export function Subscriptions() {
                       <td className="px-6 py-4"><StatusBadge status={sub.status as SubscriptionStatus} /></td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleEdit(sub)}
+                            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800"
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
                           {hasInvoice(sub) ? (
                             <button
                               onClick={() => handleViewInvoice(sub)}
@@ -328,7 +346,11 @@ export function Subscriptions() {
       </div>
 
       <SubscriptionCategoryModal open={catModalOpen} onClose={() => setCatModalOpen(false)} />
-      <SubscriptionModal open={subModalOpen} onClose={() => setSubModalOpen(false)} />
+      <SubscriptionModal
+        open={subModalOpen}
+        onClose={() => { setSubModalOpen(false); setEditingSub(null); }}
+        subscription={editingSub}
+      />
       <InvoicePreviewModal
         invoice={previewInvoice}
         onClose={() => setPreviewInvoice(null)}
