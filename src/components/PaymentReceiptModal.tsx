@@ -1,10 +1,11 @@
-import { Printer } from 'lucide-react';
+import { MessageCircle, Printer, Send } from 'lucide-react';
 import type { Payment } from '@/types';
 import { Modal } from '@/components/Modal';
 import { formatCurrency, formatCurrencyDetailed } from '@/utils/calculations';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useSettings } from '@/context/SettingsContext';
 import { downloadPdfFromElement } from '@/utils/printDocument';
+import { buildWhatsAppUrl, buildTelegramUrl, openShareUrl } from '@/utils/share';
 
 interface PaymentReceiptModalProps {
   payment: Payment | null;
@@ -19,6 +20,14 @@ export function PaymentReceiptModal({ payment, onClose }: PaymentReceiptModalPro
 
   const invoice = db.invoices.find((item) => item.id === payment.invoiceId);
   const client = db.clients.find((item) => item.id === payment.clientId);
+
+  const shareMessage = `Hello ${client?.name ?? 'Customer'},
+Payment received successfully!
+Receipt No: *${payment.paymentNumber}*
+Invoice Ref: *${invoice?.invoiceNumber ?? '-'}*
+Amount Paid: ${formatCurrency(payment.amount)}
+Date: ${new Date(payment.date).toLocaleDateString('en-IN')}
+Thank you for your business with *Zubkas Technology Private Limited*!`;
 
   return (
     <Modal open={Boolean(payment)} onClose={onClose} title={`Payment Receipt · ${payment.paymentNumber}`} size="lg">
@@ -102,7 +111,13 @@ export function PaymentReceiptModal({ payment, onClose }: PaymentReceiptModalPro
       </div>
 
       {/* Actions — outside printable area */}
-      <div className="no-print flex justify-end gap-3 pt-4">
+      <div className="no-print flex flex-wrap justify-end gap-3 pt-4">
+        <button onClick={() => openShareUrl(buildWhatsAppUrl(client?.phone, shareMessage))} className="flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ebe5d]">
+          <MessageCircle className="h-4 w-4" /> WhatsApp
+        </button>
+        <button onClick={() => openShareUrl(buildTelegramUrl(shareMessage))} className="flex items-center gap-2 rounded-lg bg-[#0088cc] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0077b3]">
+          <Send className="h-4 w-4" /> Telegram
+        </button>
         <button onClick={() => downloadPdfFromElement('printable-receipt-content', payment.paymentNumber.replace(/\//g, '-'))} className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">
           <Printer className="h-4 w-4" /> Download PDF
         </button>

@@ -43,7 +43,7 @@ export function Layout({ currentPage, onNavigate, onLogout, children }: LayoutPr
           <div className="animate-fade-in">{children}</div>
         </main>
         <footer className="px-4 py-4 text-center sm:px-6 lg:px-8">
-          <p className="text-xs text-slate-400 dark:text-slate-600">Powered by Zubkas Workspace</p>
+          <p className="text-xs text-slate-400 dark:text-slate-600">Powered by Zubkas</p>
         </footer>
       </div>
     </div>

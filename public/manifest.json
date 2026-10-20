@@ -5,22 +5,22 @@
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#9f0f0f",
+  "theme_color": "#8B151B",
   "icons": [
     {
-      "src": "/zubkas-logo.png",
+      "src": "/zubkas_icon_hd_new.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/zubkas-logo.png",
+      "src": "/zubkas_icon_hd_new.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/zubkas-logo.png",
+      "src": "/zubkas_icon_hd_new.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "maskable"

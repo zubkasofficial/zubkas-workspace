@@ -1,4 +1,4 @@
-import { CircleCheck as CheckCircle2, Printer } from 'lucide-react';
+import { CircleCheck as CheckCircle2, MessageCircle, Printer, Send } from 'lucide-react';
 import type { Invoice } from '@/types';
 import { Modal } from '@/components/Modal';
 import { formatCurrency, formatCurrencyDetailed, getInvoiceBalance, getInvoiceTotal, getInvoiceSubtotal, todayISO } from '@/utils/calculations';
@@ -6,6 +6,7 @@ import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
 import { useSettings } from '@/context/SettingsContext';
 import { downloadPdfFromElement } from '@/utils/printDocument';
+import { buildWhatsAppUrl, buildTelegramUrl, openShareUrl } from '@/utils/share';
 
 interface InvoicePreviewModalProps { invoice: Invoice | null; onClose: () => void; onLogPayment: () => void; }
 export function InvoicePreviewModal({ invoice, onClose, onLogPayment }: InvoicePreviewModalProps) {
@@ -39,6 +40,12 @@ export function InvoicePreviewModal({ invoice, onClose, onLogPayment }: InvoiceP
     onClose();
     showToast('Invoice marked as paid and records synchronized');
   };
+  const shareMessage = `Hello ${client?.name ?? 'Customer'},
+Please find your invoice *${invoice.invoiceNumber}* from *Zubkas Technology Private Limited*.
+Amount Due: ${formatCurrency(getInvoiceBalance(invoice))}
+Due Date: ${new Date(invoice.dueDate).toLocaleDateString('en-IN')}
+Status: ${invoice.status}
+Thank you!`;
   return (
     <Modal open={Boolean(invoice)} onClose={onClose} title={`Invoice Preview · ${invoice.invoiceNumber}`} size="lg">
       <div id="printable-invoice-content" className="space-y-6">
@@ -92,6 +99,12 @@ export function InvoicePreviewModal({ invoice, onClose, onLogPayment }: InvoiceP
         <div className="mt-8 pt-4 pb-12 text-center" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}><p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Authorized Signatory: {profile.name}</p><p className="mt-1 block text-[11px] text-slate-400">This is a computer-generated document.</p><div style={{ height: '24px', width: '100%' }} /></div>
       </div>
       <div className="no-print flex flex-wrap justify-end gap-3 pt-4">
+        <button onClick={() => openShareUrl(buildWhatsAppUrl(client?.phone, shareMessage))} className="flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ebe5d]">
+          <MessageCircle className="h-4 w-4" /> WhatsApp
+        </button>
+        <button onClick={() => openShareUrl(buildTelegramUrl(shareMessage))} className="flex items-center gap-2 rounded-lg bg-[#0088cc] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0077b3]">
+          <Send className="h-4 w-4" /> Telegram
+        </button>
         <button onClick={() => downloadPdfFromElement('printable-invoice-content', invoice.invoiceNumber.replace(/\//g, '-'))} className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300"><Printer className="h-4 w-4" /> Download PDF</button>
         {getInvoiceBalance(invoice) > 0 && <button onClick={onLogPayment} className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">Log Payment</button>}
         <button onClick={markPaid} className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"><CheckCircle2 className="h-4 w-4" /> Mark as Paid</button>
