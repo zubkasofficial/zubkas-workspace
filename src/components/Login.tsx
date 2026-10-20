@@ -86,16 +86,13 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   }, [showToast]);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        showToast('Installing Zubkas App...');
-      }
-      setDeferredPrompt(null);
-    } else {
-      showToast('To install: use your browser menu and select "Add to Home Screen" or "Install app".', 'info');
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      showToast('Installing Zubkas App...');
     }
+    setDeferredPrompt(null);
   };
 
   const handlePasswordLogin = async (e: React.FormEvent) => {
@@ -572,8 +569,8 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           )}
         </div>
 
-        {/* Install App Button — hidden when already running as installed PWA */}
-        {!isStandalone && (
+        {/* Install App Button — only shown when a native install prompt is available */}
+        {!isStandalone && deferredPrompt && (
           <button
             onClick={handleInstallClick}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"

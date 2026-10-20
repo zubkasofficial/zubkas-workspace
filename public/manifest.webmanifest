@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Zubkas Workspace",
+  "short_name": "Zubkas",
+  "description": "Empowering Business Operations & Financial Management",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8B151B",
+  "icons": [
+    {
+      "src": "/zubkas_icon_hd_new.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/zubkas_icon_hd_new.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

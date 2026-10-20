@@ -1,5 +1,5 @@
 const CACHE_NAME = 'zubkas-v1';
-const CORE_ASSETS = ['/', '/index.html', '/manifest.json'];
+const CORE_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/zubkas_icon_hd_new.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
