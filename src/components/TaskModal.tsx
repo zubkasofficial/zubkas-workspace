@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { SquareCheck as CheckSquare, Save, X } from 'lucide-react';
+import { SquareCheck as CheckSquare, Save, X, FolderPlus } from 'lucide-react';
 import type { ProjectTask, TaskPriority } from '@/hooks/useProjectTasks';
 import { useProjectTasks } from '@/hooks/useProjectTasks';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
 import { useEmployees } from '@/hooks/useEmployees';
 import { todayISO } from '@/utils/calculations';
+import type { Project, Client } from '@/types';
 
 interface TaskModalProps {
   open: boolean;
@@ -23,61 +24,142 @@ const PRIORITIES: { value: TaskPriority; label: string; color: string }[] = [
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
 const labelClass = 'mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300';
 
+type ProjectSelectValue = string | '__none__' | '__new__';
+
 export function TaskModal({ open, onClose, editingTask, presetProjectId }: TaskModalProps) {
-  const { db } = useWorkspace();
+  const { db, addProject, addClient } = useWorkspace();
   const { addTask, updateTask } = useProjectTasks();
   const { showToast } = useToast();
   const { employees: allEmployees } = useEmployees();
-  const [projectId, setProjectId] = useState('');
+  const [projectSelect, setProjectSelect] = useState<ProjectSelectValue>('');
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('medium');
   const [dueDate, setDueDate] = useState(todayISO());
   const [description, setDescription] = useState('');
   const [assignedToId, setAssignedToId] = useState('');
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectClientId, setNewProjectClientId] = useState('');
+  const [newProjectClientName, setNewProjectClientName] = useState('');
   const employees = allEmployees.filter((e) => e.status === 'Active');
 
   useEffect(() => {
     if (open) {
       if (editingTask) {
-        setProjectId(editingTask.project_id);
+        if (editingTask.is_temporary || !editingTask.project_id) {
+          setProjectSelect('__none__');
+        } else {
+          setProjectSelect(editingTask.project_id);
+        }
         setTitle(editingTask.title);
         setPriority(editingTask.priority ?? 'medium');
         setDueDate(editingTask.due_date);
         setDescription(editingTask.description ?? '');
         setAssignedToId(editingTask.assignedToId ?? '');
+        setNewProjectName('');
+        setNewProjectClientId('');
+        setNewProjectClientName('');
       } else {
-        setProjectId(presetProjectId ?? db.projects[0]?.id ?? '');
+        setProjectSelect(presetProjectId ?? (db.projects[0]?.id ?? '__none__'));
         setTitle('');
         setPriority('medium');
         setDueDate(todayISO());
         setDescription('');
         setAssignedToId('');
+        setNewProjectName('');
+        setNewProjectClientId('');
+        setNewProjectClientName('');
       }
     }
   }, [open, editingTask, presetProjectId, db.projects]);
 
+  const handleNewClientChange = (value: string) => {
+    setNewProjectClientId(value);
+    if (value === '__new_client__') {
+      setNewProjectClientName('');
+    } else {
+      const client = db.clients.find((c) => c.id === value);
+      setNewProjectClientName(client?.name ?? '');
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!projectId) { showToast('Please select a project', 'error'); return; }
     if (!title.trim()) { showToast('Task title is required', 'error'); return; }
-    const project = db.projects.find((p) => p.id === projectId);
-    if (!project) { showToast('Selected project not found', 'error'); return; }
-    const clientName = db.clients.find((c) => c.id === project.clientId)?.name ?? 'Unassigned';
+
+    let resolvedProjectId: string | null = null;
+    let resolvedProjectName = '';
+    let resolvedClientName = 'Unassigned';
+    let isTemporary = false;
+
+    if (projectSelect === '__none__') {
+      isTemporary = true;
+      resolvedProjectId = null;
+      resolvedProjectName = '';
+      resolvedClientName = 'Ad-hoc Task';
+    } else if (projectSelect === '__new__') {
+      if (!newProjectName.trim()) { showToast('Please enter a project name', 'error'); return; }
+      if (!newProjectClientId) { showToast('Please select or enter a client', 'error'); return; }
+
+      let clientId = newProjectClientId;
+      let clientName = newProjectClientName;
+
+      if (newProjectClientId === '__new_client__') {
+        if (!newProjectClientName.trim()) { showToast('Please enter a client name', 'error'); return; }
+        clientId = crypto.randomUUID();
+        clientName = newProjectClientName.trim();
+        const newClient: Client = {
+          id: clientId,
+          name: clientName,
+          email: '',
+          phone: '',
+          address: '',
+          gstin: '',
+          createdAt: new Date().toISOString(),
+        };
+        addClient(newClient);
+      }
+
+      const newProject: Project = {
+        id: crypto.randomUUID(),
+        name: newProjectName.trim(),
+        clientId,
+        description: '',
+        status: 'Not Started',
+        startDate: todayISO(),
+        dueDate: '',
+        budget: 0,
+      };
+      addProject(newProject);
+      resolvedProjectId = newProject.id;
+      resolvedProjectName = newProject.name;
+      resolvedClientName = clientName;
+      isTemporary = false;
+    } else {
+      const project = db.projects.find((p) => p.id === projectSelect);
+      if (!project) { showToast('Selected project not found', 'error'); return; }
+      resolvedProjectId = project.id;
+      resolvedProjectName = project.name;
+      resolvedClientName = db.clients.find((c) => c.id === project.clientId)?.name ?? 'Unassigned';
+      isTemporary = false;
+    }
+
     const assignedEmployee = employees.find((e) => e.id === assignedToId);
     const assignedToName = assignedEmployee?.name;
 
     if (editingTask) {
       updateTask(editingTask.id, {
-        project_id: projectId, project_name: project.name, client_name: clientName,
+        project_id: resolvedProjectId, project_name: resolvedProjectName, client_name: resolvedClientName,
         title: title.trim(), due_date: dueDate, priority, description: description.trim(),
         assignedToId: assignedToId || undefined, assignedToName,
+        is_temporary: isTemporary,
       });
       showToast('Task updated successfully');
     } else {
       addTask({
-        projectId, projectName: project.name, clientName,
+        projectId: resolvedProjectId, projectName: resolvedProjectName, clientName: resolvedClientName,
         title: title.trim(), dueDate: dueDate || todayISO(), priority, description: description.trim(),
         assignedToId: assignedToId || undefined, assignedToName,
+        isTemporary,
       });
       showToast('Task created successfully');
     }
@@ -104,17 +186,46 @@ export function TaskModal({ open, onClose, editingTask, presetProjectId }: TaskM
 
         <form onSubmit={submit} className="space-y-4 p-6">
           <div>
-            <label className={labelClass}>Select Project <span className="text-brand-600">*</span></label>
-            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputClass} required>
-              {db.projects.length === 0 && <option value="" disabled>No projects yet — create a project first</option>}
+            <label className={labelClass}>Select Project</label>
+            <select value={projectSelect} onChange={(e) => setProjectSelect(e.target.value as ProjectSelectValue)} className={inputClass}>
               {db.projects.length > 0 && !editingTask && <option value="" disabled>Select a project...</option>}
+              <option value="__none__">— None (Temporary / Ad-hoc Task) —</option>
               {db.projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name} — {db.clients.find((c) => c.id === project.clientId)?.name ?? 'Unassigned'}
                 </option>
               ))}
+              <option value="__new__">+ Create New Project Directly</option>
             </select>
           </div>
+
+          {projectSelect === '__new__' && (
+            <div className="space-y-3 rounded-xl border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-800 dark:bg-brand-900/10">
+              <div className="flex items-center gap-2 text-sm font-semibold text-brand-700 dark:text-brand-400">
+                <FolderPlus className="h-4 w-4" /> New Project Details
+              </div>
+              <div>
+                <label className={labelClass}>Project Name <span className="text-brand-600">*</span></label>
+                <input value={newProjectName} onChange={(e) => setNewProjectName(e.target.value)} placeholder="e.g. Website Redesign" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Client <span className="text-brand-600">*</span></label>
+                <select value={newProjectClientId} onChange={(e) => handleNewClientChange(e.target.value)} className={inputClass}>
+                  <option value="">Select a client...</option>
+                  {db.clients.map((client) => (
+                    <option key={client.id} value={client.id}>{client.name}</option>
+                  ))}
+                  <option value="__new_client__">+ Type a new client name</option>
+                </select>
+              </div>
+              {newProjectClientId === '__new_client__' && (
+                <div>
+                  <label className={labelClass}>New Client Name <span className="text-brand-600">*</span></label>
+                  <input value={newProjectClientName} onChange={(e) => setNewProjectClientName(e.target.value)} placeholder="e.g. Acme Corp" className={inputClass} />
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <label className={labelClass}>Task Title <span className="text-brand-600">*</span></label>

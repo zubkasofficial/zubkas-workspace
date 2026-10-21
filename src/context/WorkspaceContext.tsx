@@ -405,7 +405,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       projects: prev.projects.filter((p) => p.id !== projectId),
     }));
     deleteRow('projects', projectId);
-    supabase.from('project_tasks').delete().eq('project_id', projectId).then(({ error }) => { if (error) console.error('delete project_tasks:', error.message); });
+    supabase.from('tasks').delete().eq('project_id', projectId).then(({ error }) => { if (error) console.error('delete tasks:', error.message); });
     window.dispatchEvent(new CustomEvent('zubkas_project_deleted', { detail: { projectId } }));
   };
 

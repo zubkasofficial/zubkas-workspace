@@ -274,6 +274,7 @@ function Subscriptions() {
 function SimpleTable({ headers, rows, emptyMessage }: { headers: string[]; rows: (string | JSX.Element)[][]; emptyMessage?: string }) {
   if (rows.length === 0) return <div className="px-6 py-12 text-center"><p className="text-sm font-medium text-slate-700 dark:text-slate-300">{emptyMessage ?? 'No records found'}</p></div>;
   return (
+    <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
     <table className="w-full min-w-[650px] text-left">
       <thead>
         <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800">
@@ -288,5 +289,6 @@ function SimpleTable({ headers, rows, emptyMessage }: { headers: string[]; rows:
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

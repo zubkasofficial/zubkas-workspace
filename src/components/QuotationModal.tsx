@@ -233,7 +233,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
         {/* Body — two columns */}
         <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
           {/* LEFT — Editor */}
-          <div className={`overflow-y-auto p-4 sm:p-6 ${showPreview ? 'lg:w-1/2' : 'w-full'} scrollbar-thin`}>
+          <div className={`overflow-y-auto p-4 sm:p-6 ${showPreview ? 'hidden lg:block lg:w-1/2' : 'w-full'} scrollbar-thin`}>
             <div className="space-y-5">
               {/* Quotation Type Switcher */}
               <div className={sectionCard}>
@@ -523,7 +523,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
 
           {/* RIGHT — Live Preview */}
           {showPreview && (
-            <div className="overflow-y-auto border-t border-slate-200 bg-slate-100 p-4 dark:border-slate-800 dark:bg-slate-950/50 lg:w-1/2 lg:border-l lg:border-t-0 scrollbar-thin sm:p-6">
+            <div className="overflow-y-auto border-t border-slate-200 bg-slate-100 p-4 dark:border-slate-800 dark:bg-slate-950/50 lg:w-1/2 lg:border-l lg:border-t-0 scrollbar-thin sm:p-6 w-full">
               <div className="mx-auto max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-slate-900 sm:max-w-lg">
                 {/* Header */}
                 <div className="flex items-start justify-between border-b-2 border-brand-600 pb-4">

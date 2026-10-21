@@ -225,7 +225,7 @@ export function Subscriptions() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
           {filtered.length > 0 ? (
             <table className="w-full min-w-[1100px] text-left">
               <thead>

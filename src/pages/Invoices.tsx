@@ -67,7 +67,7 @@ export function Invoices() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
           <table className="w-full min-w-[980px] text-left">
             <thead>
               <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800">

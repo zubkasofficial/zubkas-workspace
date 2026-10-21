@@ -1,4 +1,4 @@
-import { CalendarClock, SquareCheck as CheckSquare, Clock, Plus, Search, Trash2, TriangleAlert as AlertTriangle, Pencil, CircleUser as UserCircle2, ChevronDown, Check } from 'lucide-react';
+import { CalendarClock, SquareCheck as CheckSquare, Clock, Plus, Search, Trash2, TriangleAlert as AlertTriangle, Pencil, CircleUser as UserCircle2, ChevronDown, Check, Zap } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/AuthContext';
@@ -70,8 +70,8 @@ export function Tasks() {
     return scopedTasks
       .filter((task) => {
         const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
-        const matchesProject = projectFilter === 'all' || task.project_id === projectFilter;
-        const matchesVisibility = !visibleProjectIds || visibleProjectIds.has(task.project_id);
+        const matchesProject = projectFilter === 'all' || (projectFilter === '__temporary__' ? (task.is_temporary || !task.project_id) : task.project_id === projectFilter);
+        const matchesVisibility = !visibleProjectIds || visibleProjectIds.has(task.project_id) || task.is_temporary || !task.project_id;
         const taskStatus: TaskStatus = task.status ?? (task.completed ? 'completed' : 'pending');
         let matchesStatus = true;
         if (statusFilter === 'pending') matchesStatus = !task.completed && taskStatus !== 'in_progress';
@@ -159,6 +159,7 @@ export function Tasks() {
             <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}
               className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-600 outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
               <option value="all">All Projects</option>
+              <option value="__temporary__">Temporary Tasks</option>
               {db.projects
                 .filter((p) => !visibleProjectIds || visibleProjectIds.has(p.id))
                 .map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -174,7 +175,7 @@ export function Tasks() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
           {filtered.length > 0 ? (
             <table className="w-full min-w-[860px] text-left">
               <thead>
@@ -211,8 +212,19 @@ export function Tasks() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="text-sm text-slate-700 dark:text-slate-300">{task.project_name}</p>
-                        <p className="text-xs text-slate-400">{task.client_name}</p>
+                        {task.is_temporary || !task.project_id ? (
+                          <div>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                              <Zap className="h-3 w-3" /> Temporary Task
+                            </span>
+                            <p className="mt-1 text-xs text-slate-400">Ad-hoc / No project</p>
+                          </div>
+                        ) : (
+                          <div>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">{task.project_name}</p>
+                            <p className="text-xs text-slate-400">{task.client_name}</p>
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {task.assignedToName ? (

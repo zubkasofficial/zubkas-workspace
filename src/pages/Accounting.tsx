@@ -37,14 +37,14 @@ export function Accounting() {
           <Plus className="h-4 w-4" /> Add Transaction
         </button>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Summary title="Total Income" value={income} icon={<TrendingUp className="h-5 w-5" />} color="emerald" />
         <Summary title="Total Expenses" value={expenses} icon={<TrendingDown className="h-5 w-5" />} color="rose" />
         <Summary title="Net Profit" value={income - expenses} icon={<TrendingUp className="h-5 w-5" />} color="brand" />
       </div>
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {db.accounting.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto -mx-4 sm:mx-0">
             <table className="w-full min-w-[860px] text-left">
               <thead>
                 <tr className="border-b border-slate-100 text-xs uppercase tracking-wider text-slate-400 dark:border-slate-800">
