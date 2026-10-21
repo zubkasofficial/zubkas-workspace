@@ -5,7 +5,8 @@ import { formatCurrency, formatCurrencyDetailed, getSubtotal } from '@/utils/cal
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useSettings } from '@/context/SettingsContext';
 import { downloadPdfFromElement } from '@/utils/printDocument';
-import { buildWhatsAppUrl, buildTelegramUrl, openShareUrl } from '@/utils/share';
+import { sharePdfDocument } from '@/utils/share';
+import { useToast } from '@/context/ToastContext';
 
 interface QuotationPreviewModalProps {
   quotation: Quotation | null;
@@ -15,6 +16,7 @@ interface QuotationPreviewModalProps {
 export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewModalProps) {
   const { db } = useWorkspace();
   const { settings, defaultPaymentAccount } = useSettings();
+  const { showToast } = useToast();
   const profile = settings.profile;
 
   if (!quotation) return null;
@@ -206,10 +208,10 @@ Thank you!`;
 
       {/* Actions — outside printable area */}
       <div className="no-print flex flex-wrap justify-end gap-3 pt-4">
-        <button onClick={() => openShareUrl(buildWhatsAppUrl(client?.phone, shareMessage))} className="flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ebe5d]">
+        <button onClick={() => sharePdfDocument({ elementId: 'printable-quotation-content', docNumber: quotation.quoteNumber, docType: 'Quotation', clientName: client?.name ?? 'Customer', message: shareMessage, phone: client?.phone, target: 'whatsapp', showToast })} className="flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1ebe5d]">
           <MessageCircle className="h-4 w-4" /> WhatsApp
         </button>
-        <button onClick={() => openShareUrl(buildTelegramUrl(shareMessage))} className="flex items-center gap-2 rounded-lg bg-[#0088cc] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0077b3]">
+        <button onClick={() => sharePdfDocument({ elementId: 'printable-quotation-content', docNumber: quotation.quoteNumber, docType: 'Quotation', clientName: client?.name ?? 'Customer', message: shareMessage, target: 'telegram', showToast })} className="flex items-center gap-2 rounded-lg bg-[#0088cc] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0077b3]">
           <Send className="h-4 w-4" /> Telegram
         </button>
         <button onClick={() => downloadPdfFromElement('printable-quotation-content', quotation.quoteNumber.replace(/\//g, '-'))} className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:border-slate-700 dark:text-slate-300">
