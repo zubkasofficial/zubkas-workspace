@@ -20,11 +20,6 @@ export function QuotationPreviewModal({ quotation, onClose }: QuotationPreviewMo
   if (!quotation) return null;
 
   const client = db.clients.find((c) => c.id === quotation.clientId);
-  const shareMessage = `Hello ${client?.name ?? 'Customer'},
-Here is your quotation *${quotation.quoteNumber}* from *Zubkas Technology Private Limited*.
-Total Value: ${formatCurrency(total)}
-Valid Until: ${new Date(quotation.validUntil).toLocaleDateString('en-IN')}
-Thank you!`;
   const isPackage = quotation.pricingMode === 'package';
   const packageTotal = Number(quotation.packageAmount ?? 0);
   const subtotal = isPackage ? packageTotal : getSubtotal(quotation.items);
@@ -34,6 +29,11 @@ Thank you!`;
   const cgst = taxAmount / 2;
   const sgst = taxAmount / 2;
   const total = subtotal + taxAmount;
+  const shareMessage = `Hello ${client?.name ?? 'Customer'},
+Here is your quotation *${quotation.quoteNumber}* from *Zubkas Technology Private Limited*.
+Total Value: ${formatCurrency(total)}
+Valid Until: ${new Date(quotation.validUntil).toLocaleDateString('en-IN')}
+Thank you!`;
   const isSubscription = quotation.quotationType === 'subscription';
   const taxLabel = profile.taxLabel || settings.tax.name || 'Tax';
   const isGst = taxLabel.toUpperCase() === 'GST';
