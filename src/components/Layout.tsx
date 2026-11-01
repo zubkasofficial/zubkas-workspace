@@ -31,7 +31,7 @@ export function Layout({ currentPage, onNavigate, onLogout, children }: LayoutPr
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
       />
-      <div className="lg:pl-64">
+      <div className="w-full min-w-0 max-w-full lg:pl-64">
         <Header
           currentPage={currentPage}
           darkMode={theme.mode === 'dark'}
@@ -39,7 +39,7 @@ export function Layout({ currentPage, onNavigate, onLogout, children }: LayoutPr
           onOpenSidebar={() => setMobileOpen(true)}
           onNavigateProfile={() => onNavigate('profile')}
         />
-        <main className="px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <main className="w-full max-w-full min-w-0 min-h-screen overflow-x-hidden px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
           <div className="animate-fade-in">{children}</div>
         </main>
         <footer className="px-4 py-4 text-center sm:px-6 lg:px-8">

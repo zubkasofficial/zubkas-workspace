@@ -198,7 +198,7 @@ export function Subscriptions() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard title="Active Subscriptions" value={String(activeCount)} icon={Repeat} color="brand" />
         <StatCard title="Monthly Recurring Revenue" value={formatCurrency(mrr)} icon={DollarSign} color="emerald" />
         <StatCard title="Annual Recurring Revenue" value={formatCurrency(arr)} icon={Calendar} color="amber" />

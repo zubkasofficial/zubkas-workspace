@@ -37,7 +37,7 @@ export function Accounting() {
           <Plus className="h-4 w-4" /> Add Transaction
         </button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Summary title="Total Income" value={income} icon={<TrendingUp className="h-5 w-5" />} color="emerald" />
         <Summary title="Total Expenses" value={expenses} icon={<TrendingDown className="h-5 w-5" />} color="rose" />
         <Summary title="Net Profit" value={income - expenses} icon={<TrendingUp className="h-5 w-5" />} color="brand" />

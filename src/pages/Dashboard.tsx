@@ -80,14 +80,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard title="Total Revenue" value={formatCurrency(metrics.received)} icon={CircleDollarSign} trend={hasData ? '12.5%' : undefined} trendUp color="brand" />
         <StatCard title="Outstanding" value={formatCurrency(Math.max(metrics.outstanding, 0))} icon={Wallet} trend={hasData ? '4.2%' : undefined} trendUp color="amber" />
         <StatCard title="Total Invoices" value={String(db.invoices.length)} icon={FileText} trend={hasData ? '8.1%' : undefined} trendUp color="emerald" />
         <StatCard title="Active Clients" value={String(db.clients.length)} icon={Users} trend={hasData ? '2.4%' : undefined} trendUp color="rose" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <RevenueChart data={chartData} />
         </div>
@@ -117,7 +117,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         {/* Recent Invoices */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800">

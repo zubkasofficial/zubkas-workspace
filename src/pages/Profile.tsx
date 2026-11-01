@@ -57,7 +57,7 @@ export function Profile() {
         <p className="text-sm text-slate-500 dark:text-slate-400">Manage your account details and login credentials</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className={cardClass}>
           <div className="flex items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-600/10 text-brand-600 dark:bg-brand-600/20 dark:text-brand-400">

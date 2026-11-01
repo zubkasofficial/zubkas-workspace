@@ -19,11 +19,11 @@ const colorMap = {
 export function StatCard({ title, value, icon: Icon, trend, trendUp, color }: StatCardProps) {
   const c = colorMap[color];
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md sm:p-5 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
+          <p className="mt-2 break-words text-xl font-bold text-slate-900 sm:text-2xl dark:text-white">{value}</p>
         </div>
         <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${c.bg} ${c.darkBg}`}>
           <Icon className={`h-6 w-6 ${c.icon} ${c.darkIcon}`} />

@@ -207,7 +207,7 @@ export function Reports() {
         </div>
 
         {/* Metric Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard title="Total Income" value={formatCurrency(metrics.income)} icon={CircleDollarSign} color="emerald" />
           <StatCard title="Total Expense" value={formatCurrency(metrics.expense)} icon={Receipt} color="rose" />
           <StatCard title="Net Profit" value={formatCurrency(metrics.profit)} icon={TrendingUp} color="brand" />
@@ -218,7 +218,7 @@ export function Reports() {
         <RevenueChart data={monthly} />
 
         {/* Invoice Summary + Transactions */}
-        <div className="grid gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="font-semibold text-slate-900">Invoice Summary</h3>
             <p className="mt-0.5 text-sm text-slate-500">Tax collected from paid and partial invoices</p>

@@ -529,7 +529,7 @@ export function QuotationModal({ open, onClose }: QuotationModalProps) {
                 <div className="flex items-start justify-between border-b-2 border-brand-600 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-600 text-lg font-bold text-white">
-                      <img src="/zubkas_icon_hd_new.png" alt="Logo" className="h-full w-full object-contain" />
+                      <img src={companyProfile.logo || '/zubkas_icon_hd_new.png'} crossOrigin="anonymous" alt="Logo" className="h-full w-full object-contain" />
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">{companyProfile.name}</h3>
