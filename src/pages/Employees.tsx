@@ -89,7 +89,7 @@ export function Employees() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard title="Total Employees" value={String(employees.length)} icon={UserCog} color="brand" />
         <StatCard title="Active Staff" value={String(activeCount)} icon={UserCog} color="emerald" />
         <StatCard title="Departments" value={String(categories.length)} icon={Tag} color="amber" />

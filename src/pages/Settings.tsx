@@ -34,7 +34,7 @@ export function Settings() {
       <CompanyProfileCard showToast={showToast} />
       <PaymentAccountsCard showToast={showToast} />
       <TermsCard showToast={showToast} />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <AdminProfileCard showToast={showToast} />
         <TaxSettingsCard showToast={showToast} />
       </div>
@@ -112,7 +112,7 @@ function CompanyProfileCard({ showToast }: { showToast: (msg: string, type?: 'su
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className={labelClass}>Company Name</label>
             <input value={profile.name} onChange={(e) => updateProfile({ ...profile, name: e.target.value })} className={inputClass} />
@@ -200,7 +200,7 @@ function PaymentAccountsCard({ showToast }: { showToast: (msg: string, type?: 's
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div><label className={labelClass}>Account Name</label><input value={acc.accountName} onChange={(e) => update(acc.id, 'accountName', e.target.value)} className={inputClass} /></div>
               <div><label className={labelClass}>Bank Name</label><input value={acc.bankName} onChange={(e) => update(acc.id, 'bankName', e.target.value)} className={inputClass} /></div>
               <div><label className={labelClass}>Branch Name</label><input value={acc.branchName} onChange={(e) => update(acc.id, 'branchName', e.target.value)} className={inputClass} /></div>
@@ -357,7 +357,7 @@ function TaxSettingsCard({ showToast }: { showToast: (msg: string, type?: 'succe
     <div className={cardClass}>
       <SectionHeader icon={<Percent className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Tax Configuration" description="Tax rate and default behavior for invoices and quotations" />
       <div className="mt-6 space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col justify-end">
             <label className={labelClass}>Tax Type</label>
             <div className="flex h-[42px] items-center rounded-lg border border-slate-200 bg-slate-50 px-3 dark:border-slate-700 dark:bg-slate-800">

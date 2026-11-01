@@ -2,16 +2,15 @@ import { Download, Eye, MoveHorizontal as MoreHorizontal, Plus, Search, SlidersH
 import { useMemo, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
-import { StatusBadge } from '@/components/StatusBadge';
 import { InvoiceModal } from '@/components/InvoiceModal';
 import { PaymentModal } from '@/components/PaymentModal';
 import { InvoicePreviewModal } from '@/components/InvoicePreviewModal';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatCurrency, getInvoiceBalance, getInvoiceTotal } from '@/utils/calculations';
-import type { Invoice, InvoiceStatus } from '@/types';
+import type { Invoice } from '@/types';
 
 export function Invoices() {
-  const { db, updateInvoiceStatus, deleteInvoice } = useWorkspace();
+  const { db, deleteInvoice } = useWorkspace();
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All');
@@ -77,7 +76,6 @@ export function Invoices() {
                 <th className="px-6 py-3 font-semibold">Due Date</th>
                 <th className="px-6 py-3 font-semibold">Amount</th>
                 <th className="px-6 py-3 font-semibold">Balance</th>
-                <th className="px-6 py-3 font-semibold">Status</th>
                 <th className="px-6 py-3 font-semibold">Actions</th>
               </tr>
             </thead>
@@ -97,12 +95,6 @@ export function Invoices() {
                     <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{new Date(invoice.dueDate).toLocaleDateString('en-IN')}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-slate-800 dark:text-slate-200">{formatCurrency(total)}</td>
                     <td className="px-6 py-4 text-sm font-semibold text-amber-600">{formatCurrency(getInvoiceBalance(invoice))}</td>
-                    <td className="px-6 py-4">
-                      <select value={invoice.status} onChange={(event) => { const result = updateInvoiceStatus(invoice.id, event.target.value as InvoiceStatus); if (result?.projectCreated) showToast('Project automatically created for this invoice!'); }} className="rounded-full border-0 bg-transparent p-0 text-xs font-semibold text-slate-600 outline-none dark:text-slate-300">
-                        <option>Paid</option><option>Partial</option><option>Unpaid</option><option>Overdue</option>
-                      </select>
-                      <div className="mt-1"><StatusBadge status={invoice.status} /></div>
-                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1">
                         <button onClick={() => setPayment(invoice)} className="flex items-center gap-1 rounded-md bg-brand-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-700">

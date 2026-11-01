@@ -47,7 +47,7 @@ Thank you!`;
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-200 pb-5 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <img src="/zubkas_icon_hd_new.png" alt="Company Logo" className="h-12 w-auto shrink-0 object-contain" />
+            <img src={profile.logo || '/zubkas_icon_hd_new.png'} crossOrigin="anonymous" alt="Company Logo" className="h-12 w-auto max-w-[160px] shrink-0 object-contain" />
             <div>
               <h3 className="font-bold text-slate-900 dark:text-white">{profile.name}</h3>
               <p className="text-xs text-slate-500">{profile.address}</p>

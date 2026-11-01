@@ -53,7 +53,7 @@ export function Projects() {
           <Plus className="h-4 w-4" /> New Project
         </button>
       </div>
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         {columns.map((column) => {
           const projects = visibleProjects.filter((project) => project.status === column.status);
           return (

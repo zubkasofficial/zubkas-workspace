@@ -140,7 +140,7 @@ export function Tasks() {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Total Tasks" value={metrics.total} icon={CheckSquare} color="brand" />
         <MetricCard title="Pending" value={metrics.pending} icon={Clock} color="amber" />
         <MetricCard title="In Progress" value={metrics.inProgress} icon={Clock} color="blue" />
