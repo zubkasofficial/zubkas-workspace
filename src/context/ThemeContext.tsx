@@ -1,32 +1,29 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 
+export type AppearanceMode = 'light' | 'dark';
+
 export interface ThemeState {
-  mode: 'light' | 'dark';
+  mode: AppearanceMode;
   accent: string;
 }
 
 interface ThemeContextValue {
   theme: ThemeState;
-  setMode: (mode: 'light' | 'dark') => void;
-  setAccent: (accent: string) => void;
-  applyTheme: () => void;
+  setMode: (mode: AppearanceMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = 'zubkas_theme_color';
+const MODE_STORAGE_KEY = 'zubkas_appearance_mode';
 
-const DEFAULT_THEME: ThemeState = { mode: 'light', accent: '#9f0f0f' };
+export const BRAND_ACCENT = '#9f0f0f';
 
-function loadTheme(): ThemeState {
+function loadMode(): AppearanceMode {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as ThemeState;
-      return { mode: parsed.mode ?? 'light', accent: parsed.accent ?? '#9f0f0f' };
-    }
-  } catch { /* ignore */ }
-  return DEFAULT_THEME;
+    return localStorage.getItem(MODE_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+  } catch {
+    return 'light';
+  }
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -69,37 +66,31 @@ function generatePalette(baseHex: string): Record<string, string> {
   return shades;
 }
 
-export function applyAccentColor(hex: string) {
-  const palette = generatePalette(hex);
+function applyBrandPalette() {
   const root = document.documentElement;
-  for (const [key, value] of Object.entries(palette)) {
+  for (const [key, value] of Object.entries(generatePalette(BRAND_ACCENT))) {
     root.style.setProperty(key, value);
   }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeState>(loadTheme);
+  const [mode, setModeState] = useState<AppearanceMode>(loadMode);
 
   useEffect(() => {
-    applyAccentColor(theme.accent);
-    if (theme.mode === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-  }, [theme.accent, theme.mode]);
-
-  const setMode = useCallback((mode: 'light' | 'dark') => {
-    setTheme((prev) => ({ ...prev, mode }));
+    applyBrandPalette();
   }, []);
 
-  const setAccent = useCallback((accent: string) => {
-    setTheme((prev) => ({ ...prev, accent }));
-  }, []);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', mode === 'dark');
+  }, [mode]);
 
-  const applyTheme = useCallback(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(theme)); } catch { /* ignore */ }
-  }, [theme]);
+  const setMode = useCallback((next: AppearanceMode) => {
+    setModeState(next);
+    try { localStorage.setItem(MODE_STORAGE_KEY, next); } catch { /* ignore */ }
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, setMode, setAccent, applyTheme }}>
+    <ThemeContext.Provider value={{ theme: { mode, accent: BRAND_ACCENT }, setMode }}>
       {children}
     </ThemeContext.Provider>
   );

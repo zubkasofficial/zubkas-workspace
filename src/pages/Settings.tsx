@@ -1,22 +1,12 @@
-import { Check, Eye, EyeOff, Image as ImageIcon, Plus, Star, Trash2, Upload, X, QrCode, Building2, CreditCard, FileText, ShieldCheck, Percent, Palette } from 'lucide-react';
+import { Eye, EyeOff, Image as ImageIcon, Plus, Star, Trash2, Upload, X, QrCode, Building2, CreditCard, FileText, ShieldCheck, Percent } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useToast } from '@/context/ToastContext';
-import { useTheme } from '@/context/ThemeContext';
 import { useSettings, type PaymentAccount } from '@/context/SettingsContext';
 
 const inputClass = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
 const labelClass = 'mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300';
 const btnPrimary = 'rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition-colors hover:bg-brand-700';
 const cardClass = 'rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900';
-
-const ACCENT_PRESETS = [
-  { name: 'Crimson', value: '#9f0f0f' },
-  { name: 'Ocean Blue', value: '#0f4f9f' },
-  { name: 'Forest Green', value: '#0f7a3e' },
-  { name: 'Sunset Orange', value: '#c4570f' },
-  { name: 'Royal Purple', value: '#6b21a8' },
-  { name: 'Slate Gray', value: '#475569' },
-];
 
 function newPaymentAccount(): PaymentAccount {
   return { id: `pa_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, accountName: '', bankName: '', branchName: '', accountNumber: '', ifsc: '', swift: '', upiId: '', isDefault: false, qrCode: '' };
@@ -38,7 +28,6 @@ export function Settings() {
         <AdminProfileCard showToast={showToast} />
         <TaxSettingsCard showToast={showToast} />
       </div>
-      <ThemeCard showToast={showToast} />
     </div>
   );
 }
@@ -394,44 +383,3 @@ function TaxSettingsCard({ showToast }: { showToast: (msg: string, type?: 'succe
   );
 }
 
-function ThemeCard({ showToast }: { showToast: (msg: string, type?: 'success' | 'error') => void }) {
-  const { theme, setMode, setAccent, applyTheme } = useTheme();
-
-  const apply = () => {
-    applyTheme();
-    showToast('Theme applied successfully');
-  };
-
-  return (
-    <div className={cardClass}>
-      <SectionHeader icon={<Palette className="h-5 w-5 text-brand-600 dark:text-brand-400" />} title="Theme & Styling" description="Customize the appearance of your workspace" />
-      <div className="mt-6 space-y-5">
-        <div>
-          <label className={labelClass}>Appearance Mode</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(['light', 'dark'] as const).map((mode) => (
-              <button key={mode} onClick={() => setMode(mode)} className={`rounded-lg border px-4 py-2.5 text-sm font-semibold capitalize transition ${theme.mode === mode ? 'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400' : 'border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800'}`}>
-                {mode === 'light' ? 'Light' : 'Dark'}
-                {theme.mode === mode && <Check className="ml-1.5 inline h-4 w-4" />}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <label className={labelClass}>Accent Color</label>
-          <div className="flex flex-wrap gap-3">
-            {ACCENT_PRESETS.map((preset) => (
-              <button key={preset.value} onClick={() => setAccent(preset.value)} title={preset.name} className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 transition ${theme.accent === preset.value ? 'border-slate-900 dark:border-white' : 'border-transparent'}`} style={{ backgroundColor: preset.value }}>
-                {theme.accent === preset.value && <Check className="h-5 w-5 text-white" />}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-slate-400">Color applies instantly. Click "Apply Theme" to save your preference.</p>
-        </div>
-        <div className="flex justify-end border-t border-slate-100 pt-4 dark:border-slate-800">
-          <button onClick={apply} className={btnPrimary}>Apply Theme</button>
-        </div>
-      </div>
-    </div>
-  );
-}
