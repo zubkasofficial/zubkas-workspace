@@ -94,7 +94,16 @@ Thank you!`;
 
         {invoice.notes && <div className="rounded-lg bg-amber-50 p-4 text-sm dark:bg-amber-900/20"><p className="font-semibold text-slate-700 dark:text-slate-200">Notes</p><p className="mt-1 text-slate-600 dark:text-slate-300">{invoice.notes}</p></div>}
 
-        {settings.terms.length > 0 && <div className="rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-800"><p className="font-semibold text-slate-700 dark:text-slate-200">Terms &amp; Conditions</p><ol className="mt-2 space-y-1 text-xs text-slate-500">{settings.terms.map((term, i) => <li key={i} className="flex gap-1.5"><span className="font-semibold text-slate-400">{i + 1}.</span><span>{term}</span></li>)}</ol></div>}
+        {(() => {
+          let effectiveTerms = (invoice.terms && invoice.terms.length > 0) ? invoice.terms : null;
+          if (!effectiveTerms && invoice.referenceId) {
+            const linkedQuote = db.quotations.find((q) => q.id === invoice.referenceId);
+            if (linkedQuote?.terms && linkedQuote.terms.length > 0) effectiveTerms = linkedQuote.terms;
+          }
+          if (!effectiveTerms) effectiveTerms = settings.terms;
+          if (!effectiveTerms || effectiveTerms.length === 0) return null;
+          return <div className="rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-800"><p className="font-semibold text-slate-700 dark:text-slate-200">Terms &amp; Conditions</p><ol className="mt-2 space-y-1 text-xs text-slate-500">{effectiveTerms.map((term, i) => <li key={i} className="flex gap-1.5"><span className="font-semibold text-slate-400">{i + 1}.</span><span>{term}</span></li>)}</ol></div>;
+        })()}
 
         <div className="mt-8 pt-4 pb-12 text-center" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}><p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Authorized Signatory: {profile.name}</p><p className="mt-1 block text-[11px] text-slate-400">This is a computer-generated document.</p><div style={{ height: '24px', width: '100%' }} /></div>
       </div>

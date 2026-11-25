@@ -1,4 +1,4 @@
-import { Download, Eye, MoveHorizontal as MoreHorizontal, Plus, Search, SlidersHorizontal, Trash2, Wallet } from 'lucide-react';
+import { Download, Eye, Pencil, Plus, Search, SlidersHorizontal, Trash2, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useToast } from '@/context/ToastContext';
@@ -15,6 +15,7 @@ export function Invoices() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('All');
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Invoice | null>(null);
   const [preview, setPreview] = useState<Invoice | null>(null);
   const [payment, setPayment] = useState<Invoice | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
@@ -103,8 +104,8 @@ export function Invoices() {
                         <button onClick={() => setPreview(invoice)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" title="View / PDF">
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title="More actions">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <button onClick={() => setEditTarget(invoice)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 dark:hover:bg-slate-800" title="Edit invoice">
+                          <Pencil className="h-4 w-4" />
                         </button>
                         <button onClick={() => setDeleteTarget(invoice)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-900/20" title="Delete invoice">
                           <Trash2 className="h-4 w-4" />
@@ -130,7 +131,7 @@ export function Invoices() {
         </div>
       </div>
 
-      <InvoiceModal open={invoiceOpen} onClose={() => setInvoiceOpen(false)} />
+      <InvoiceModal open={invoiceOpen || Boolean(editTarget)} onClose={() => { setInvoiceOpen(false); setEditTarget(null); }} editInvoice={editTarget} />
       <PaymentModal invoice={payment} onClose={() => setPayment(null)} />
       <InvoicePreviewModal invoice={preview} onClose={() => setPreview(null)} onLogPayment={() => { setPayment(preview); setPreview(null); }} />
       <ConfirmDialog

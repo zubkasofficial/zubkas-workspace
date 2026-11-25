@@ -1,4 +1,4 @@
-import { Plus, Receipt, Save, Trash2, X } from 'lucide-react';
+import { Pencil, Plus, Receipt, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Invoice, InvoiceItem } from '@/types';
 import { inputClass, labelClass } from '@/components/Modal';
@@ -10,6 +10,7 @@ import { useSettings } from '@/context/SettingsContext';
 interface InvoiceModalProps {
   open: boolean;
   onClose: () => void;
+  editInvoice?: Invoice | null;
 }
 
 type DiscountUnit = 'flat' | 'percent';
@@ -17,12 +18,13 @@ type DiscountUnit = 'flat' | 'percent';
 const sectionCard = 'rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/50';
 const smallInput = 'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-white';
 
-export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
-  const { db, addInvoice } = useWorkspace();
+export function InvoiceModal({ open, onClose, editInvoice }: InvoiceModalProps) {
+  const { db, addInvoice, updateInvoice } = useWorkspace();
   const { showToast } = useToast();
   const { settings } = useSettings();
   const paymentAccounts = settings.paymentAccounts;
   const taxSettings = settings.tax;
+  const isEditing = Boolean(editInvoice);
 
   const [clientId, setClientId] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -39,20 +41,35 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
 
   useEffect(() => {
     if (open) {
-      setClientId(db.clients[0]?.id ?? '');
-      setInvoiceNumber(generateInvoiceNumber(db.invoices.length));
-      setDate(todayISO());
-      setDueDate(todayISO());
-      setNotes('');
-      setItems([newInvoiceItem()]);
-      setApplyTax(taxSettings.enabled);
-      setDiscountValue('0');
-      setDiscountUnit('flat');
-      setPaymentAccountId(paymentAccounts.find((a) => a.isDefault)?.id ?? paymentAccounts[0]?.id ?? '');
-      setTerms([...settings.terms]);
-      setNewTerm('');
+      if (editInvoice) {
+        setClientId(editInvoice.clientId);
+        setInvoiceNumber(editInvoice.invoiceNumber);
+        setDate(editInvoice.date);
+        setDueDate(editInvoice.dueDate);
+        setNotes(editInvoice.notes);
+        setItems(editInvoice.items.length > 0 ? editInvoice.items : [newInvoiceItem()]);
+        setApplyTax(editInvoice.taxEnabled !== false);
+        setDiscountValue(String(editInvoice.discountValue ?? 0));
+        setDiscountUnit(editInvoice.discountUnit ?? 'flat');
+        setPaymentAccountId(paymentAccounts.find((a) => a.isDefault)?.id ?? paymentAccounts[0]?.id ?? '');
+        setTerms(editInvoice.terms && editInvoice.terms.length > 0 ? [...editInvoice.terms] : [...settings.terms]);
+        setNewTerm('');
+      } else {
+        setClientId(db.clients[0]?.id ?? '');
+        setInvoiceNumber(generateInvoiceNumber(db.invoices.length));
+        setDate(todayISO());
+        setDueDate(todayISO());
+        setNotes('');
+        setItems([newInvoiceItem()]);
+        setApplyTax(taxSettings.enabled);
+        setDiscountValue('0');
+        setDiscountUnit('flat');
+        setPaymentAccountId(paymentAccounts.find((a) => a.isDefault)?.id ?? paymentAccounts[0]?.id ?? '');
+        setTerms([...settings.terms]);
+        setNewTerm('');
+      }
     }
-  }, [open, db.clients, db.invoices.length, taxSettings.enabled, paymentAccounts, settings.terms]);
+  }, [open, editInvoice, db.clients, db.invoices.length, taxSettings.enabled, paymentAccounts, settings.terms]);
 
   const updateItem = (id: string, field: keyof InvoiceItem, value: string) =>
     setItems((prev) => prev.map((item) => item.id === id ? { ...item, [field]: field === 'quantity' || field === 'rate' ? Number(value) : value } : item));
@@ -64,6 +81,7 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
   };
 
   const removeTerm = (index: number) => setTerms((prev) => prev.filter((_, i) => i !== index));
+  const editTerm = (index: number, value: string) => setTerms((prev) => prev.map((t, i) => i === index ? value : t));
 
   const financials = useMemo(() => {
     const subtotal = getSubtotal(items);
@@ -84,26 +102,48 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
       showToast('Complete every line item with description and rate', 'error');
       return;
     }
-    const invoice: Invoice = {
-      id: generateId('inv'),
-      invoiceNumber,
-      clientId,
-      date,
-      dueDate,
-      items,
-      notes,
-      status: 'Unpaid',
-      paidAmount: 0,
-      balanceDue: financials.grandTotal,
-      createdAt: date,
-      taxEnabled: applyTax,
-      taxType: 'none',
-      taxRate: applyTax ? taxSettings.rate : 0,
-      taxLabel: taxSettings.name,
-    };
-    addInvoice(invoice);
-    onClose();
-    showToast('Invoice created successfully');
+    if (isEditing && editInvoice) {
+      const updated: Invoice = {
+        ...editInvoice,
+        clientId,
+        date,
+        dueDate,
+        items,
+        notes,
+        terms,
+        taxEnabled: applyTax,
+        taxType: 'none',
+        taxRate: applyTax ? taxSettings.rate : 0,
+        taxLabel: taxSettings.name,
+        discountValue: Number(discountValue) || 0,
+        discountUnit,
+      };
+      updateInvoice(updated);
+      onClose();
+      showToast('Invoice updated successfully');
+    } else {
+      const invoice: Invoice = {
+        id: generateId('inv'),
+        invoiceNumber,
+        clientId,
+        date,
+        dueDate,
+        items,
+        notes,
+        status: 'Unpaid',
+        paidAmount: 0,
+        balanceDue: financials.grandTotal,
+        createdAt: date,
+        taxEnabled: applyTax,
+        taxType: 'none',
+        taxRate: applyTax ? taxSettings.rate : 0,
+        taxLabel: taxSettings.name,
+        terms,
+      };
+      addInvoice(invoice);
+      onClose();
+      showToast('Invoice created successfully');
+    }
   };
 
   if (!open) return null;
@@ -116,10 +156,10 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-600/10 text-brand-600 dark:bg-brand-600/20">
-              <Receipt className="h-5 w-5" />
+              {isEditing ? <Pencil className="h-5 w-5" /> : <Receipt className="h-5 w-5" />}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">New Invoice</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{isEditing ? 'Edit Invoice' : 'New Invoice'}</h2>
               <p className="text-xs text-slate-400">{invoiceNumber}</p>
             </div>
           </div>
@@ -130,7 +170,7 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
               className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition-colors hover:bg-brand-700"
             >
               <Save className="h-4 w-4" />
-              <span className="hidden sm:inline">Save Invoice</span>
+              <span className="hidden sm:inline">{isEditing ? 'Update Invoice' : 'Save Invoice'}</span>
               <span className="sm:hidden">Save</span>
             </button>
             <button
@@ -271,7 +311,7 @@ export function InvoiceModal({ open, onClose }: InvoiceModalProps) {
               {terms.map((term, index) => (
                 <div key={index} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600/10 text-xs font-bold text-brand-600 dark:bg-brand-600/20">{index + 1}</span>
-                  <p className="flex-1 text-xs text-slate-700 dark:text-slate-300">{term}</p>
+                  <input value={term} onChange={(e) => editTerm(index, e.target.value)} className={`${smallInput} flex-1 border-0 bg-transparent px-0 text-xs`} />
                   <button type="button" onClick={() => removeTerm(index)} className="text-slate-400 transition-colors hover:text-rose-600"><X className="h-3.5 w-3.5" /></button>
                 </div>
               ))}

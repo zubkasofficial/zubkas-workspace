@@ -86,6 +86,7 @@ export interface Invoice {
   discountUnit?: 'flat' | 'percent';
   pricingMode?: 'itemized' | 'package';
   packageAmount?: number;
+  terms?: string[];
 }
 
 export interface Payment {

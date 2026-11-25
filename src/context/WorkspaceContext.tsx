@@ -33,6 +33,7 @@ interface WorkspaceContextValue {
   setDb: React.Dispatch<React.SetStateAction<AppDatabase>>;
   resetDb: () => void;
   addInvoice: (invoice: Invoice) => void;
+  updateInvoice: (invoice: Invoice) => void;
   updateInvoiceStatus: (invoiceId: string, status: InvoiceStatus) => LogPaymentResult | null;
   logPayment: (invoiceId: string, input: LogPaymentInput) => LogPaymentResult | null;
   addAccountingEntry: (entry: AccountingEntry) => void;
@@ -117,6 +118,7 @@ function rowToInvoice(r: Record<string, unknown>): Invoice {
     taxEnabled: r.tax_enabled, taxType: r.tax_type, taxRate: r.tax_rate, taxLabel: r.tax_label,
     discountValue: r.discount_value, discountUnit: r.discount_unit,
     pricingMode: r.pricing_mode, packageAmount: Number(r.package_amount ?? 0),
+    terms: r.terms,
   };
 }
 function invoiceToRow(inv: Invoice) {
@@ -129,6 +131,7 @@ function invoiceToRow(inv: Invoice) {
     tax_enabled: inv.taxEnabled, tax_type: inv.taxType, tax_rate: inv.taxRate, tax_label: inv.taxLabel,
     discount_value: inv.discountValue, discount_unit: inv.discountUnit,
     pricing_mode: inv.pricingMode, package_amount: inv.packageAmount,
+    terms: inv.terms || null,
   };
 }
 
@@ -237,6 +240,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const addInvoice = (invoice: Invoice) => {
     setDb((prev) => ({ ...prev, invoices: [...prev.invoices, invoice] }));
+    upsertRow('invoices', invoiceToRow(invoice));
+  };
+
+  const updateInvoice = (invoice: Invoice) => {
+    setDb((prev) => ({ ...prev, invoices: prev.invoices.map((inv) => inv.id === invoice.id ? invoice : inv) }));
     upsertRow('invoices', invoiceToRow(invoice));
   };
 
@@ -471,6 +479,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         subscriptionStartDate: quotation.subscriptionStartDate,
         subscriptionEndDate: quotation.subscriptionEndDate,
         referenceId: quotationId,
+        terms: quotation.terms,
         taxEnabled: quotation.taxEnabled !== false,
         taxType: quotation.taxEnabled === false ? 'none' : (quotation.taxType ?? 'custom'),
         taxRate: quotation.taxEnabled === false ? 0 : (quotation.taxRate ?? 18),
@@ -827,7 +836,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, deleteProject, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
+    <WorkspaceContext.Provider value={{ db, setDb, resetDb, addInvoice, updateInvoice, updateInvoiceStatus, logPayment, addAccountingEntry, addProject, updateProject, updateProjectStatus, deleteProject, addClient, updateClient, deleteClient, addQuotation, convertQuotationToInvoice, addSubscription, updateSubscription, updateSubscriptionStatus, deleteSubscription, renewSubscription, generateInvoiceFromSubscription, syncSubscriptionsFromQuotations, deleteInvoice, deleteQuotation, deletePayment, deleteAccountingEntry }}>
       {children}
     </WorkspaceContext.Provider>
   );
