@@ -13,6 +13,7 @@ import {
   newSubscription,
   calculateNextBillingDate,
   todayISO,
+  localTodayISO,
 } from '@/utils/calculations';
 import { supabase } from '@/lib/supabase';
 
@@ -213,6 +214,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         clearTimeout(timeout);
 
+        const today = localTodayISO();
+        const rawSubs = (subsRes.data ?? []).map(rowToSubscription) as Subscription[];
+        const expiredIds = rawSubs
+          .filter((s) => s.endDate && s.endDate < today && s.status !== 'paused' && s.status !== 'cancelled' && s.status !== 'expired')
+          .map((s) => s.id);
+        const syncedSubs = rawSubs.map((s) =>
+          expiredIds.includes(s.id) ? { ...s, status: 'expired' as SubscriptionStatus } : s
+        );
+        if (expiredIds.length > 0) {
+          supabase.from('subscriptions').update({ status: 'expired' }).in('id', expiredIds)
+            .then(({ error }) => { if (error) console.error('expire subs:', error.message); });
+        }
+
         setDb({
           clients: (clientsRes.data ?? []).map(rowToClient),
           quotations: (quotesRes.data ?? []).map(rowToQuotation),
@@ -220,7 +234,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           payments: (paymentsRes.data ?? []).map(rowToPayment),
           accounting: (accountingRes.data ?? []).map(rowToAccounting),
           projects: (projectsRes.data ?? []).map(rowToProject),
-          subscriptions: (subsRes.data ?? []).map(rowToSubscription),
+          subscriptions: syncedSubs,
         });
         setLoaded(true);
       } catch {
@@ -524,7 +538,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setDb((prev) => {
       const existing = prev.subscriptions.find((s) => s.id === subscriptionId);
       if (!existing) return prev;
-      const updatedSub: Subscription = { ...existing, ...updates };
+      let updatesWithReactivation = updates;
+      const newEndDate = updates.endDate !== undefined ? updates.endDate : existing.endDate;
+      const explicitStatus = updates.status;
+      const today = localTodayISO();
+      if (newEndDate && newEndDate >= today && (existing.status === 'expired' || existing.status === 'completed')) {
+        if (explicitStatus !== 'paused' && explicitStatus !== 'cancelled') {
+          updatesWithReactivation = { ...updates, status: 'active' };
+        }
+      }
+      const updatedSub: Subscription = { ...existing, ...updatesWithReactivation };
 
       // Find linked invoice(s) using the same loose match as the Subscriptions page,
       // plus a fallback by invoiceType=recurring + same client. This ensures the
@@ -664,11 +687,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const renewSubscription = (subscriptionId: string) => {
     setDb((prev) => {
-      const next = prev.subscriptions.map((sub) =>
-        sub.id === subscriptionId
-          ? { ...sub, nextBillingDate: calculateNextBillingDate(todayISO(), sub.billingCycle), status: 'active' as SubscriptionStatus }
-          : sub
-      );
+      const today = todayISO();
+      const next = prev.subscriptions.map((sub) => {
+        if (sub.id !== subscriptionId) return sub;
+        const newStartDate = sub.startDate ?? today;
+        const newEndDate = calculateNextBillingDate(today, sub.billingCycle);
+        return {
+          ...sub,
+          startDate: newStartDate,
+          endDate: newEndDate,
+          nextBillingDate: calculateNextBillingDate(today, sub.billingCycle),
+          status: 'active' as SubscriptionStatus,
+        };
+      });
       const updated = next.find((s) => s.id === subscriptionId);
       if (updated) upsertRow('subscriptions', subscriptionToRow(updated));
       return { ...prev, subscriptions: next };
